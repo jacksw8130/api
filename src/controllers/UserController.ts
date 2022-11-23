@@ -194,48 +194,100 @@ export class UserController {
         try {
             var user_data = await User.findOne({_id: req.user.user_id});
 
-            const bdata = {
-                user_id: req.user.user_id,
-                ticket_id: req.body.ticket_id,
-                ticket_type: req.body.ticket_type,
-                ticket_data: req.body.ticket_data,
-                yes_or_no: req.body.yes_or_no,
-                seat: req.body.seat,
-                winning_percentage: req.body.winning_percentage,
-                bid_amount: req.body.bid_amount,
-                bid_status: "pending",
-                created_at: new Utils().indianTimeZone,
-                updated_at: new Utils().indianTimeZone
-            };
-
-            let bid = await new Bid(bdata).save();
-            if(bid){
-                const from_balance=user_data.wallet-req.body.bid_amount;
-                const idata = {
-                    from: 'users',
-                    from_id: req.user.user_id,
-                    from_balance: from_balance,
-                    mode: "bidding",
-                    coins: req.body.bid_amount,
-                    bid_id: bid['_id'],
+            if(req.body.yes_or_no=="no"){
+                let bid_amount=req.body.bid_amount*req.body.winning_percentage/100;
+                if(user_data['wallet']>bid_amount){
+                    const bdata = {
+                        user_id: req.user.user_id,
+                        ticket_id: req.body.ticket_id,
+                        ticket_type: req.body.ticket_type,
+                        ticket_data: req.body.ticket_data,
+                        yes_or_no: req.body.yes_or_no,
+                        seat: req.body.seat,
+                        winning_percentage: req.body.winning_percentage,
+                        bid_amount: bid_amount,
+                        bid_status: "pending",
+                        created_at: new Utils().indianTimeZone,
+                        updated_at: new Utils().indianTimeZone
+                    };
+        
+                    let bid = await new Bid(bdata).save();
+                    if(bid){
+                        const from_balance=user_data.wallet-bid_amount;
+                        const idata = {
+                            from: 'users',
+                            from_id: req.user.user_id,
+                            from_balance: from_balance,
+                            mode: "bidding",
+                            coins: bid_amount,
+                            bid_id: bid['_id'],
+                            created_at: new Utils().indianTimeZone,
+                            updated_at: new Utils().indianTimeZone
+                        };
+                        let walletTransaction = await new WalletTransaction(idata).save();
+                        if(walletTransaction){
+                            var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -bid_amount} }, {new: true, useFindAndModify: false});
+                        }
+                        
+                        const data = {
+                            message :'Successfully bid on party ticket!',
+                            bid:bid,
+                            transaction:walletTransaction,
+                            user:user_wallet,
+                            status_code:200
+        
+                        };
+                        res.json(data);
+                    }
+                }else{
+                    throw new Error('Low Balance');
+                }
+            }else{
+                const bdata = {
+                    user_id: req.user.user_id,
+                    ticket_id: req.body.ticket_id,
+                    ticket_type: req.body.ticket_type,
+                    ticket_data: req.body.ticket_data,
+                    yes_or_no: req.body.yes_or_no,
+                    seat: req.body.seat,
+                    winning_percentage: req.body.winning_percentage,
+                    bid_amount: req.body.bid_amount,
+                    bid_status: "pending",
                     created_at: new Utils().indianTimeZone,
                     updated_at: new Utils().indianTimeZone
                 };
-                let walletTransaction = await new WalletTransaction(idata).save();
-                if(walletTransaction){
-                    var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -req.body.bid_amount} }, {new: true, useFindAndModify: false});
+    
+                let bid = await new Bid(bdata).save();
+                if(bid){
+                    const from_balance=user_data.wallet-req.body.bid_amount;
+                    const idata = {
+                        from: 'users',
+                        from_id: req.user.user_id,
+                        from_balance: from_balance,
+                        mode: "bidding",
+                        coins: req.body.bid_amount,
+                        bid_id: bid['_id'],
+                        created_at: new Utils().indianTimeZone,
+                        updated_at: new Utils().indianTimeZone
+                    };
+                    let walletTransaction = await new WalletTransaction(idata).save();
+                    if(walletTransaction){
+                        var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -req.body.bid_amount} }, {new: true, useFindAndModify: false});
+                    }
+                    
+                    const data = {
+                        message :'Successfully bid on party ticket!',
+                        bid:bid,
+                        transaction:walletTransaction,
+                        user:user_wallet,
+                        status_code:200
+    
+                    };
+                    res.json(data);
                 }
-                
-                const data = {
-                    message :'Successfully bid on party ticket!',
-                    bid:bid,
-                    transaction:walletTransaction,
-                    user:user_wallet,
-                    status_code:200
-
-                };
-                res.json(data);
             }
+
+            
         } catch (e) {
             next(e);
         }
@@ -246,47 +298,98 @@ export class UserController {
         try {
             var user_data = await User.findOne({_id: req.user.user_id});
 
-            const bdata = {
-                user_id: req.user.user_id,
-                ticket_id: req.body.ticket_id,
-                ticket_type: req.body.ticket_type,
-                ticket_data: req.body.ticket_data,
-                yes_or_no: req.body.yes_or_no,
-                winning_percentage: req.body.winning_percentage,
-                bid_amount: req.body.bid_amount,
-                bid_status: "pending",
-                created_at: new Utils().indianTimeZone,
-                updated_at: new Utils().indianTimeZone
-            };
-
-            let bid = await new Bid(bdata).save();
-            if(bid){
-                const from_balance=user_data.wallet-req.body.bid_amount;
-                const idata = {
-                    from: 'users',
-                    from_id: req.user.user_id,
-                    from_balance: from_balance,
-                    mode: "bidding",
-                    coins: req.body.bid_amount,
-                    bid_id: bid['_id'],
+            if(req.body.yes_or_no=="no"){
+                let bid_amount=req.body.bid_amount*req.body.winning_percentage/100;
+                if(user_data['wallet']>bid_amount){
+                    const bdata = {
+                        user_id: req.user.user_id,
+                        ticket_id: req.body.ticket_id,
+                        ticket_type: req.body.ticket_type,
+                        ticket_data: req.body.ticket_data,
+                        yes_or_no: req.body.yes_or_no,
+                        winning_percentage: req.body.winning_percentage,
+                        bid_amount: bid_amount,
+                        bid_status: "pending",
+                        created_at: new Utils().indianTimeZone,
+                        updated_at: new Utils().indianTimeZone
+                    };
+        
+                    let bid = await new Bid(bdata).save();
+                    if(bid){
+                        const from_balance=user_data.wallet-bid_amount;
+                        const idata = {
+                            from: 'users',
+                            from_id: req.user.user_id,
+                            from_balance: from_balance,
+                            mode: "bidding",
+                            coins: req.body.bid_amount,
+                            bid_id: bid['_id'],
+                            created_at: new Utils().indianTimeZone,
+                            updated_at: new Utils().indianTimeZone
+                        };
+                        let walletTransaction = await new WalletTransaction(idata).save();
+                        if(walletTransaction){
+                            var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -bid_amount} }, {new: true, useFindAndModify: false});
+                        }
+                        
+                        const data = {
+                            message :'Successfully bid on candidate!',
+                            bid:bid,
+                            transaction:walletTransaction,
+                            user:user_wallet,
+                            status_code:200
+        
+                        };
+                        res.json(data);
+                    }
+                }else{
+                    throw new Error('Low Balance');
+                }
+            }else{
+                const bdata = {
+                    user_id: req.user.user_id,
+                    ticket_id: req.body.ticket_id,
+                    ticket_type: req.body.ticket_type,
+                    ticket_data: req.body.ticket_data,
+                    yes_or_no: req.body.yes_or_no,
+                    winning_percentage: req.body.winning_percentage,
+                    bid_amount: req.body.bid_amount,
+                    bid_status: "pending",
                     created_at: new Utils().indianTimeZone,
                     updated_at: new Utils().indianTimeZone
                 };
-                let walletTransaction = await new WalletTransaction(idata).save();
-                if(walletTransaction){
-                    var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -req.body.bid_amount} }, {new: true, useFindAndModify: false});
+    
+                let bid = await new Bid(bdata).save();
+                if(bid){
+                    const from_balance=user_data.wallet-req.body.bid_amount;
+                    const idata = {
+                        from: 'users',
+                        from_id: req.user.user_id,
+                        from_balance: from_balance,
+                        mode: "bidding",
+                        coins: req.body.bid_amount,
+                        bid_id: bid['_id'],
+                        created_at: new Utils().indianTimeZone,
+                        updated_at: new Utils().indianTimeZone
+                    };
+                    let walletTransaction = await new WalletTransaction(idata).save();
+                    if(walletTransaction){
+                        var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -req.body.bid_amount} }, {new: true, useFindAndModify: false});
+                    }
+                    
+                    const data = {
+                        message :'Successfully bid on candidate!',
+                        bid:bid,
+                        transaction:walletTransaction,
+                        user:user_wallet,
+                        status_code:200
+    
+                    };
+                    res.json(data);
                 }
-                
-                const data = {
-                    message :'Successfully bid on candidate!',
-                    bid:bid,
-                    transaction:walletTransaction,
-                    user:user_wallet,
-                    status_code:200
-
-                };
-                res.json(data);
             }
+
+            
         } catch (e) {
             next(e);
         }

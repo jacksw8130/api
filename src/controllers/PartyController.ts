@@ -63,8 +63,11 @@ export class PartyController {
                             // update yes_seats
                             if(bid['yes_or_no']=="yes"){
                                 if(party_winning_seats>=bid['seat']){
-                                    let winning_amount =bid['bid_amount']+(bid['bid_amount']*bid['winning_percentage'])/100;
-                                    let to_balance=user_data.wallet+winning_amount;
+                                    // bid + winning amount
+
+                                    let winning_amount = bid['bid_amount']*bid['winning_percentage']/100;
+                                    let total_amount = bid['bid_amount']+(bid['bid_amount']*bid['winning_percentage'])/100;
+                                    let to_balance=user_data.wallet+total_amount;
                                     // update bid
                                     await Bid.findOneAndUpdate({_id: bid['_id']}, {result:true, result_declare_status:true, winning_amount:winning_amount,bid_status:"win"}, {new: true, useFindAndModify: false});
                                     // create transaction
@@ -73,22 +76,23 @@ export class PartyController {
                                         to_id: bid['user_id'],
                                         to_balance: to_balance,
                                         mode: "winning",
-                                        coins: winning_amount,
+                                        coins: total_amount,
                                         bid_id: bid['_id'],
                                         created_at: new Utils().indianTimeZone,
                                         updated_at: new Utils().indianTimeZone
                                     };
                                     let walletTransaction = await new WalletTransaction(idata).save();
                                     if(walletTransaction){
-                                         await User.findOneAndUpdate({_id: bid['user_id']}, { $inc: { wallet: winning_amount} }, {new: true, useFindAndModify: false});
+                                         await User.findOneAndUpdate({_id: bid['user_id']}, { $inc: { wallet: total_amount} }, {new: true, useFindAndModify: false});
                                     }
                                 }else{
                                     await Bid.findOneAndUpdate({_id: bid['_id']}, {result:false, result_declare_status:true, winning_amount:0,bid_status:"loss"}, {new: true, useFindAndModify: false});
                                 }
                             }else{
-                                if(party_winning_seats<=bid['seat']){
-                                    let winning_amount = bid['bid_amount']+(bid['bid_amount']*bid['winning_percentage'])/100;
-                                    let to_balance=user_data.wallet+winning_amount;
+                                if(party_winning_seats<bid['seat']){
+                                    let winning_amount = bid['bid_amount'];
+                                    let total_amount = bid['bid_amount']+(bid['bid_amount']*bid['winning_percentage'])/100;
+                                    let to_balance=user_data.wallet+total_amount;
                                     // update bid
                                     await Bid.findOneAndUpdate({_id: bid['_id']}, {result:true,result_declare_status:true, winning_amount:winning_amount,bid_status:"win"}, {new: true, useFindAndModify: false});
                                     // create transaction
@@ -97,14 +101,14 @@ export class PartyController {
                                         to_id: bid['user_id'],
                                         to_balance: to_balance,
                                         mode: "winning",
-                                        coins: winning_amount,
+                                        coins: total_amount,
                                         bid_id: bid['_id'],
                                         created_at: new Utils().indianTimeZone,
                                         updated_at: new Utils().indianTimeZone
                                     };
                                     let walletTransaction = await new WalletTransaction(idata).save();
                                     if(walletTransaction){
-                                        await User.findOneAndUpdate({_id: bid['user_id']}, { $inc: { wallet: winning_amount} }, {new: true, useFindAndModify: false});
+                                        await User.findOneAndUpdate({_id: bid['user_id']}, { $inc: { wallet: total_amount} }, {new: true, useFindAndModify: false});
                                     }
                                 }else{
                                     await Bid.findOneAndUpdate({_id: bid['_id']}, {result:true,result_declare_status:true, winning_amount:0,bid_status:"loss"}, {new: true, useFindAndModify: false});

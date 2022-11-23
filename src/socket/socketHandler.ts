@@ -188,7 +188,116 @@ export class SocketHandler{
         });
 
         // state wise tickets for users
-        socket.on('partyStatewise', async (data)=>{ // state_id, user_id
+        socket.on('partyStatewise_', async (data)=>{ // state_id, user_id
+            let state = await State.findOne({_id:data.state_id, status:true}, {__v: 0});
+            if(state){
+                let myData:object = state.toObject();
+                myData['tickets']=[];
+                const parties = await Party.find({state_id:state['_id'], status:true}, {__v: 0});
+                let party_id_array =[];
+                for (const party of parties) {
+                    
+                    party_id_array.push(party['_id']);
+
+                    // get ticket total yes or no winning amount
+                    let allTicket=await Ticket.find({party_id:party['_id'], status:true}, {__v: 0}).populate('party_id').sort({created_at: -1})
+                            
+                    for (const aticket of allTicket) {
+                        let amyData = aticket.toObject();
+                        let bidValue=0;
+                        let usedYes=[];
+                        let abids = await Bid.find({user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
+                        for (const abid of abids) {
+                            if(abid['yes_or_no']=="yes"){ 
+                                bidValue+=abid['bid_amount'];
+                            // }else {
+                            //     let no_seat=abid['seat']+1;
+                            //     let yebids = await Bid.find({yes_or_no:"yes",seat: { $lte: no_seat}, user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
+                                
+                            //     if(yebids&&yebids.length>0){
+                            //         bidValue-=abid['bid_amount']*abid['winning_percentage']/100;
+                            //     }else{
+                            //         bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
+                            //     }
+                                
+                            // }
+
+                            // }else {
+                            //     let no_seat=abid['seat'];
+                            //     let yebids = await Bid.find({yes_or_no:"yes",seat: { $lte: no_seat}, user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
+                                
+                            //     if(yebids&&yebids.length>0){
+                            //         var yebidval=0;
+                            //         for (const yebid of yebids) {
+                            //             bidValue-=yebid['bid_amount']*yebid['winning_percentage']/100;
+                            //             yebidval+=yebid['bid_amount']*yebid['winning_percentage']/100
+                            //         }
+                                    
+                            //         yebidval-=abid['bid_amount']*abid['winning_percentage']/100;
+                            //         if(yebidval<0)
+                            //         {
+                            //             yebidval=yebidval*-1;
+                            //         }
+                            //         bidValue+=yebidval;
+                            //     }else{
+                            //         bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
+                            //     }
+                                
+                            // }
+
+                        }else {
+                            let no_seat=abid['seat'];
+                            let yebid = await Bid.findOne({yes_or_no:"yes",seat: { $lte: no_seat}, user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id'], _id:{ "$nin": usedYes }}).sort({created_at: -1});
+                            //console.log(yebid);
+                            if(yebid){
+                                usedYes.push(yebid._id);
+                                var yebidval=0;
+                                bidValue-=yebid['bid_amount'];
+                                yebidval+=yebid['bid_amount'];
+                                yebidval-=abid['bid_amount'];
+                                if(yebidval<0)
+                                {
+                                    yebidval=yebidval*-1;
+                                }
+                                bidValue+=yebidval;
+                            }else{
+                                bidValue+=abid['bid_amount'];
+                            }
+                            
+                        }
+
+                        // if(amyData['name']=="aap"){
+                        //     console.log(bidValue);
+                        // }
+                        }
+                        
+                        amyData['bidValue']=bidValue;
+                        myData['tickets'].push(amyData);
+                    }
+                    //end
+                    
+                }
+                let tickets = await Ticket.find({party_id:{ "$in": party_id_array }});
+                let ticket_id_array =[];
+                for (const ticket of tickets) {
+                    ticket_id_array.push(ticket['_id']);
+                }
+
+                let bids = await Bid.find({user_id:data.user_id, ticket_type:"tickets", ticket_id:{ "$in": ticket_id_array }}).sort({created_at: -1}).populate([
+                    { path:'ticket_id', populate:{ path: "party_id", populate: { path: "state_id" } }}
+                ]);
+                myData['bids']=bids;
+                socketService.io.to(data.socket_id).emit('partyStatewise_', myData);
+                
+                
+            }else{
+                socketService.io.to(data.socket_id).emit('partyStatewise_', "state not exist");
+            }
+            
+        });
+
+         // state wise tickets for users
+         socket.on('partyStatewise', async (data)=>{ // state_id, user_id
             let state = await State.findOne({_id:data.state_id, status:true}, {__v: 0});
             if(state){
                 let myData:object = state.toObject();
@@ -206,22 +315,39 @@ export class SocketHandler{
                         let amyData = aticket.toObject();
                         let bidValue=0;
                         let abids = await Bid.find({user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
-                        for (const abid of abids) {
-                            if(abid['yes_or_no']=="yes"){ 
-                                bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
-                            }else {
-                                let no_seat=abid['seat']+1;
-                                let yebids = await Bid.find({yes_or_no:"yes",seat: { $lte: no_seat}, user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
-                                
-                                if(yebids&&yebids.length>0){
-                                    bidValue-=abid['bid_amount']*abid['winning_percentage']/100;
-                                }else{
-                                    bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
-                                }
-                                
-                            }
+                        let min_bids = await Bid.findOne({user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({seat: 1});
+                        let max_bids = await Bid.findOne({user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({seat: -1});
+                        let seatArray=[];
+                        if(min_bids && max_bids){
+                            let min_num=min_bids['seat']-20>0 ? min_bids['seat']-20 : 1;
+                            let max_num=min_bids['seat']+20;
                             
+                            for(let i=min_num;i<=max_num;i++){
+                                let exposure=0;
+                                for (const abid of abids) {
+                                    if(abid['yes_or_no']=="yes"){
+                                        if(i>=abid['seat']){
+                                            let add_value=abid['bid_amount']*abid['winning_percentage']/100;
+                                            exposure+=add_value;
+                                        }else{
+                                            exposure-=abid['bid_amount'];
+                                        }
+                                    }else{
+                                        if(i<abid['seat']){
+                                            exposure+=abid['bid_amount'];
+                                        }else{
+                                            let add_value=abid['bid_amount']*abid['winning_percentage']/100;
+                                            exposure-=add_value;
+                                        }
+                                    }
+                                }
+                                if(bidValue>exposure){
+                                    bidValue=exposure;
+                                }
+                                seatArray.push({seat:i,exposure:exposure});
+                            }
                         }
+                        amyData['chart']=seatArray;  
                         amyData['bidValue']=bidValue;
                         myData['tickets'].push(amyData);
                     }
@@ -246,6 +372,7 @@ export class SocketHandler{
             }
             
         });
+
 
          // user candidate bids locationwise
          socket.on('candidateLocationwise', async (data)=>{ // location_id, user_id
@@ -308,7 +435,125 @@ export class SocketHandler{
             }
         });
 
-        // state wise tickets for admin
+        // // state wise tickets for adminn
+        // socket.on('partyStatewiseAdminn', async (data)=>{ // state_id, user_id
+        //     let state = await State.findOne({_id:data.state_id, status:true}, {__v: 0});
+        //     if(state){
+        //         let myData:object = state.toObject();
+        //         myData['tickets']=[];
+        //         const parties = await Party.find({state_id:state['_id'], status:true}, {__v: 0});
+        //         let party_id_array =[];
+        //         for (const party of parties) {
+                    
+        //             party_id_array.push(party['_id']);
+
+        //             // get ticket total yes or no winning amount
+        //             let allTicket=await Ticket.find({party_id:party['_id'], status:true}, {__v: 0}).populate('party_id').sort({created_at: -1})
+                            
+        //             for (const aticket of allTicket) {
+        //                 let amyData = aticket.toObject();
+        //                 let bidValue=0;
+        //                 let user_id_array=[];
+        //                 let popup_array=[];
+        //                 let ubids = await Bid.find({ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
+        //                 for (let ubid of ubids) {
+                            
+        //                 let uin=user_id_array.includes(ubid['user_id']);
+        //                 console.log(uin);
+        //                 if(uin==false){
+        //                     user_id_array.push(ubid['user_id']);
+        //                 }
+        //                     // user_id_array=user_id_array.filter((item, index) => user_id_array.indexOf(item) === index);
+        //                 //     console.log(user_id_array.length);
+        //                 //     if(user_id_array.length==0){
+        //                 //         console.log("insert - 0");
+        //                 //         user_id_array.push(ubid['user_id']);   
+        //                 //     }else{
+        //                 //         var exist=false;
+        //                 //         for (let ui of user_id_array) {
+        //                 //             console.log("ui"+ui);
+        //                 //             console.log("ubid"+ubid['user_id']);
+        //                 //             if(ui==ubid['user_id']){
+        //                 //                 exist=true;
+        //                 //             }
+        //                 //         }
+        //                 //         console.log(exist);
+        //                 //         if(exist==true){
+        //                 //             console.log("insert - false");
+        //                 //             user_id_array.push(ubid['user_id']);
+        //                 //         }
+        //                 //     }
+        //                 }
+        //                 // user_id_array = user_id_array.filter( function( item, index, inputArray ) {
+        //                 //     return inputArray.indexOf(item) == index;
+        //                 // });
+        //                 console.log(user_id_array);
+        //                 for (const user_id of user_id_array) {
+        //                     let abids = await Bid.find({user_id:user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
+        //                     for (const abid of abids) {
+        //                         let popup_obj:any={};
+        //                         if(abid['yes_or_no']=="yes"){
+
+        //                             // popup
+        //                             let objIndex = popup_array.findIndex((obj => obj.id == abid['seat']));
+        //                             if(objIndex==-1){
+        //                                 popup_obj.yes_or_no="yes";
+        //                                 popup_obj.id=abid['seat'];
+        //                                 popup_obj.winning_percentage=abid['winning_percentage'];
+        //                                 popup_obj.bid_amount=abid['bid_amount'];
+        //                                 popup_array.push(popup_obj);
+        //                             }else{
+        //                                 popup_array[objIndex].bid_amount+=abid['bid_amount'];
+        //                             }
+        //                             // end popup
+
+        //                             bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
+        //                         }else {
+                                    
+        //                             // popup
+        //                             let objIndex = popup_array.findIndex((obj => obj.id == abid['seat']));
+        //                             if(objIndex==-1){
+        //                                 popup_obj.yes_or_no="no";
+        //                                 popup_obj.id=abid['seat'];
+        //                                 popup_obj.winning_percentage=abid['winning_percentage'];
+        //                                 popup_obj.bid_amount=abid['bid_amount'];
+        //                                 popup_array.push(popup_obj);
+        //                             }else{
+        //                                 popup_array[objIndex].bid_amount+=abid['bid_amount'];
+        //                             }
+        //                             // end popup
+
+        //                             let no_seat=abid['seat']+1;
+        //                             let yebids = await Bid.find({yes_or_no:"yes",seat: { $lte: no_seat}, user_id:user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
+                                    
+        //                             if(yebids&&yebids.length>0){
+        //                                 bidValue-=abid['bid_amount']*abid['winning_percentage']/100;
+        //                             }else{
+        //                                 bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
+        //                             }
+                                    
+        //                         }
+        //                         //console.log(popup_obj);
+        //                     }
+        //                 }
+        //                 amyData['bidValue']=bidValue;
+        //                 amyData['popup_array']=popup_array;
+        //                 myData['tickets'].push(amyData);
+                        
+        //             }
+        //             //end
+                    
+        //         }
+        //         socketService.io.emit('partyStatewiseAdminn', myData);
+                
+                
+        //     }else{
+        //         socketService.io.emit('partyStatewiseAdminn', "state not exist");
+        //     }
+            
+        // });
+
+        // state wise tickets for adminn
         socket.on('partyStatewiseAdmin', async (data)=>{ // state_id, user_id
             let state = await State.findOne({_id:data.state_id, status:true}, {__v: 0});
             if(state){
@@ -326,19 +571,50 @@ export class SocketHandler{
                     for (const aticket of allTicket) {
                         let amyData = aticket.toObject();
                         let bidValue=0;
-                        let user_id_array =[];
-                        let ubids = await Bid.find({user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
-                        for (const ubid of ubids) {
-                            if(user_id_array.includes(ubid['user_id'])==false){
-                                user_id_array.push(ubid['user_id']);
-                            }
+                        let user_id_array=[];
+                        let popup_array=[];
+                        let ubids = await Bid.aggregate([
+                            { $match: {ticket_type:"tickets", ticket_id:aticket['_id']} },
+                            { $group: { _id: { user_id: "$user_id" }} }
+                        ]);
+                        for (let ubid of ubids) {
+                            user_id_array.push(ubid['_id']['user_id']);
                         }
                         for (const user_id of user_id_array) {
                             let abids = await Bid.find({user_id:user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
                             for (const abid of abids) {
-                                if(abid['yes_or_no']=="yes"){ 
+                                let popup_obj:any={};
+                                if(abid['yes_or_no']=="yes"){
+
+                                    // popup
+                                    let objIndex = popup_array.findIndex((obj => obj.id == abid['seat']));
+                                    if(objIndex==-1){
+                                        popup_obj.yes_or_no="yes";
+                                        popup_obj.id=abid['seat'];
+                                        popup_obj.winning_percentage=abid['winning_percentage'];
+                                        popup_obj.bid_amount=abid['bid_amount'];
+                                        popup_array.push(popup_obj);
+                                    }else{
+                                        popup_array[objIndex].bid_amount+=abid['bid_amount'];
+                                    }
+                                    // end popup
+
                                     bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
                                 }else {
+                                    
+                                    // popup
+                                    let objIndex = popup_array.findIndex((obj => obj.id == abid['seat']));
+                                    if(objIndex==-1){
+                                        popup_obj.yes_or_no="no";
+                                        popup_obj.id=abid['seat'];
+                                        popup_obj.winning_percentage=abid['winning_percentage'];
+                                        popup_obj.bid_amount=abid['bid_amount'];
+                                        popup_array.push(popup_obj);
+                                    }else{
+                                        popup_array[objIndex].bid_amount+=abid['bid_amount'];
+                                    }
+                                    // end popup
+
                                     let no_seat=abid['seat']+1;
                                     let yebids = await Bid.find({yes_or_no:"yes",seat: { $lte: no_seat}, user_id:user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
                                     
@@ -349,32 +625,81 @@ export class SocketHandler{
                                     }
                                     
                                 }
-                                
+                                //console.log(popup_obj);
                             }
                         }
                         amyData['bidValue']=bidValue;
+                        amyData['popup_array']=popup_array;
+                        let popup_array_new=[];
+                        for (const popa of popup_array) {
+                            
+                            for (const popr of popup_array) {
+                                
+                                if(popr['id']!=popa['id']){
+
+                                    if(popa['yes_or_no']=="no"){
+                                        if(popr['yes_or_no']=="no" && popr['id']>popa['id']){
+                                            popa['bid_amount']+=popr['bid_amount'];
+                                        }else if(popr['yes_or_no']=="yes" && popr['id']<popa['id']){
+                                            popa['bid_amount']-=popr['bid_amount'];
+                                        }
+                                    }else{
+                                        if(popr['yes_or_no']=="yes" && popr['id']<popa['id']){
+                                            popa['bid_amount']+=popr['bid_amount'];
+                                        }else if(popr['yes_or_no']=="no" && popr['id']>popa['id']){
+                                            popa['bid_amount']-=popr['bid_amount'];
+                                        }
+                                    }
+                                }
+                                
+                            }
+                            popup_array_new.push(popa);
+                            
+                        }
+                        popup_array_new.sort((a, b) => {
+                            return a.id - b.id;
+                        });
+                        let j=0;
+                        let popup_array_new2=[];
+                        for (const pan of popup_array_new) {
+                            if(j>0){
+                                let m=pan['id'];
+                                //console.log(l);
+                                //console.log(popup_array_new[j-1]['id']);
+                               // for(let k=pan['id'];k<popup_array_new[j-1]['id']+1;k--){
+                                 //   console.log(k);
+                                    // popup_array_new2.push(
+                                    //     {
+                                    //         id:k,
+                                    //         bid_amount:pan['bid_amount']
+                                    //     }
+                                    // );
+                                //}
+                                
+                                // while (m < popup_array_new[j-1]['id']+1) {
+                                //     console.log(m);
+                                //     m--;
+                                //     popup_array_new2.push(
+                                //         {
+                                //             id:m,
+                                //             bid_amount:pan['bid_amount']
+                                //         }   
+                                //     );
+                                // }
+                            }
+                            j++;
+                        }
+                        amyData['popup_array_new']=popup_array_new;
+                        amyData['popup_array_new2']=popup_array_new2;
                         myData['tickets'].push(amyData);
+                        
                     }
                     //end
-                    
                 }
-                let tickets = await Ticket.find({party_id:{ "$in": party_id_array }});
-                let ticket_id_array =[];
-                for (const ticket of tickets) {
-                    ticket_id_array.push(ticket['_id']);
-                }
-
-                let bids = await Bid.find({ticket_type:"tickets", ticket_id:{ "$in": ticket_id_array }}).sort({created_at: -1}).populate([
-                    { path:'ticket_id', populate:{ path: "party_id", populate: { path: "state_id" } }}
-                ]);
-                myData['bids']=bids;
-                socketService.io.to(data.socket_id).emit('partyStatewiseAdmin', myData);
-                
-                
+                socketService.io.emit('partyStatewiseAdmin', myData);  
             }else{
-                socketService.io.to(data.socket_id).emit('partyStatewiseAdmin', "state not exist");
+                socketService.io.emit('partyStatewiseAdmin', "state not exist");
             }
-            
         });
 
         // admin candidate bids locationwise
@@ -423,8 +748,7 @@ export class SocketHandler{
                             }
                         }
                     }
-                    
-
+                    console.log(mainValue);
                     let tticket=await TicketCandidate.findOne({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1}).populate('candidate_id');
                     if(tticket){
                         let amyData = tticket.toObject();
@@ -443,9 +767,9 @@ export class SocketHandler{
                     { path:'ticket_id', populate:{ path: "candidate_id", populate: { path: "state_id" } }}
                 ]);
                 myData['bids']=bids;
-                socketService.io.to(data.socket_id).emit('candidateLocationwiseAdmin', myData);
+                socketService.io.emit('candidateLocationwiseAdmin', myData);
             }else{
-                socketService.io.to(data.socket_id).emit('candidateLocationwiseAdmin', 'Location Not Exist');
+                socketService.io.emit('candidateLocationwiseAdmin', 'Location Not Exist');
             }
         });
 

@@ -24,7 +24,7 @@ class CandidateRouter {
     }
     patchRoutes() {
         this.router.patch('/update/:id', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, CandidateValidators_1.CandidateValidators.update(), GlobalMiddleWare_1.GlobalMiddleWare.checkError, CandidateController_1.CandidateController.update);
-        this.router.patch('/result/:id', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, CandidateValidators_1.CandidateValidators.result(), GlobalMiddleWare_1.GlobalMiddleWare.checkError, CandidateController_1.CandidateController.result);
+        //this.router.patch('/result/:id', GlobalMiddleWare.superadminAuthenticate, CandidateValidators.result(), GlobalMiddleWare.checkError, CandidateController.result);
     }
     deleteRoutes() {
         this.router.delete('/delete/:id', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, CandidateValidators_1.CandidateValidators.delete(), GlobalMiddleWare_1.GlobalMiddleWare.checkError, CandidateController_1.CandidateController.delete);
