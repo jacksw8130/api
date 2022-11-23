@@ -65,7 +65,7 @@ class SuperadminValidators {
                         throw new Error('Superadmin Does Not Exist');
                     }
                 });
-            }), (0, express_validator_1.query)('password', 'Password is Required').isAlphanumeric()];
+            }), (0, express_validator_1.query)('password', 'Password is Required').isString()];
     }
     static updateAdmin() {
         return [(0, express_validator_1.param)('id').custom((id, { req }) => {

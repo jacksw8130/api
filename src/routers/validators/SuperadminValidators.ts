@@ -72,7 +72,7 @@ export class SuperadminValidators{
                         throw  new Error('Superadmin Does Not Exist');
                     }
                 });
-            }), query('password', 'Password is Required').isAlphanumeric()]
+            }), query('password', 'Password is Required').isString()]
     }
 
     static updateAdmin() {
