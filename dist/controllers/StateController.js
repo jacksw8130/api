@@ -70,6 +70,21 @@ class StateController {
             }
         });
     }
+    static allAdminState(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const state = yield State_1.default.find();
+                const data = {
+                    message: 'Success',
+                    data: state
+                };
+                res.json(data);
+            }
+            catch (e) {
+                next(e);
+            }
+        });
+    }
     static allStateWithTicket(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {

@@ -18,6 +18,7 @@ class StateRouter {
     getRoutes(){
         this.router.get('/id/:id', StateValidators.State(), GlobalMiddleWare.checkError, StateController.State);
         this.router.get('/all', StateController.allState);
+        this.router.get('/superadmin/all', StateController.allAdminState);
         this.router.get('/allStateWithTicket', GlobalMiddleWare.authenticate, GlobalMiddleWare.checkError, StateController.allStateWithTicket);
         this.router.get('/user/all', StateController.userAllState);
         this.router.get('/tickets/:stateId', StateValidators.stateTickets(), GlobalMiddleWare.checkError, StateController.stateTickets);

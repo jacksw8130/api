@@ -78,21 +78,35 @@ export class SocketHandler{
                         for (const aticket of allTicket) {
                             let bidValue=0;
                             let abids = await Bid.find({user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
-                            for (const abid of abids) {
-                                if(abid['yes_or_no']=="yes"){ 
-                                    bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
-                                }else {
-                                    let no_seat=abid['seat']+1;
-                                    let yebids = await Bid.find({yes_or_no:"yes",seat: { $lte: no_seat}, user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
-                                    
-                                    if(yebids&&yebids.length>0){
-                                        bidValue-=abid['bid_amount']*abid['winning_percentage']/100;
-                                    }else{
-                                        bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
-                                    }
-                                    
-                                }
+                            let min_bids = await Bid.findOne({user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({seat: 1});
+                            let max_bids = await Bid.findOne({user_id:data.user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({seat: -1});
+                            if(min_bids && max_bids){
+                                let min_num=min_bids['seat']-20>0 ? min_bids['seat']-20 : 1;
+                                let max_num=min_bids['seat']+20;
                                 
+                                for(let i=min_num;i<=max_num;i++){
+                                    let exposure=0;
+                                    for (const abid of abids) {
+                                        if(abid['yes_or_no']=="yes"){
+                                            if(i>=abid['seat']){
+                                                let add_value=abid['bid_amount']*abid['winning_percentage']/100;
+                                                exposure+=add_value;
+                                            }else{
+                                                exposure-=abid['bid_amount'];
+                                            }
+                                        }else{
+                                            if(i<abid['seat']){
+                                                exposure+=abid['bid_amount']*100/abid['winning_percentage'];
+                                            }else{
+                                                let add_value=abid['bid_amount']
+                                                exposure-=add_value;
+                                            }
+                                        }
+                                    }
+                                    if(bidValue>exposure){
+                                        bidValue=exposure;
+                                    }
+                                }
                             }
                             if(bidValue<0)
                             {
@@ -100,6 +114,7 @@ export class SocketHandler{
                             }
                             ticketSum+=bidValue;
                         }
+                        
                     }
 
                     // candidate tickets
@@ -334,9 +349,9 @@ export class SocketHandler{
                                         }
                                     }else{
                                         if(i<abid['seat']){
-                                            exposure+=abid['bid_amount'];
+                                            exposure+=abid['bid_amount']*100/abid['winning_percentage'];
                                         }else{
-                                            let add_value=abid['bid_amount']*abid['winning_percentage']/100;
+                                            let add_value=abid['bid_amount']
                                             exposure-=add_value;
                                         }
                                     }
@@ -553,8 +568,172 @@ export class SocketHandler{
             
         // });
 
-        // state wise tickets for adminn
-        socket.on('partyStatewiseAdmin', async (data)=>{ // state_id, user_id
+
+                                            // ADMIN
+
+        // state wise tickets for admin
+        socket.on('partyStatewiseAdmin', async (data)=>{ // state_id, admin_id
+            let state = await State.findOne({_id:data.state_id, status:true}, {__v: 0});
+
+            const users = await User.find({admin_id:data.admin_id, status:true}, {__v: 0});
+            let users_id_array =[];
+            for (const user of users) {
+                users_id_array.push(user['_id']);
+            }
+
+            if(state && users){
+                let myData:object = state.toObject();
+                myData['tickets']=[];
+                const parties = await Party.find({state_id:state['_id'], status:true}, {__v: 0});
+                let party_id_array =[];
+                for (const party of parties) {
+                    
+                    party_id_array.push(party['_id']);
+
+                    // get ticket total yes or no winning amount
+                    let allTicket=await Ticket.find({party_id:party['_id'], status:true}, {__v: 0}).populate('party_id').sort({created_at: -1})
+                            
+                    for (const aticket of allTicket) {
+                        let amyData = aticket.toObject();
+                        let bidValue=0;
+                        let abids = await Bid.find({ticket_type:"tickets", ticket_id:aticket['_id'], user_id:{ "$in": users_id_array }},{yes_or_no:1, seat:1, bid_amount:1, winning_percentage:1}).sort({created_at: -1});
+                        
+                        let min_bids = await Bid.findOne({ticket_type:"tickets", ticket_id:aticket['_id'], user_id:{ "$in": users_id_array }}).sort({seat: 1});
+                        let max_bids = await Bid.findOne({ticket_type:"tickets", ticket_id:aticket['_id'], user_id:{ "$in": users_id_array }}).sort({seat: -1});
+                        let seatArray=[];
+                        if(min_bids && max_bids){
+                            let min_num=min_bids['seat']-20>0 ? min_bids['seat']-20 : 1;
+                            let max_num=min_bids['seat']+20;
+                            
+                            for(let i:number=min_num;i<=max_num;i++){
+                                let exposure=0;
+                                for (const abid of abids) {
+
+                                    if(abid['yes_or_no']=="yes"){
+                                        if(i>=abid['seat']){
+                                            exposure+=abid['bid_amount']*abid['winning_percentage']/100;
+                                        }else{
+                                            exposure-=abid['bid_amount'];
+                                        }
+                                    }else{
+                                        if(i<abid['seat']){
+                                            exposure+=abid['bid_amount'];
+                                        }else{
+                                            exposure-=abid['bid_amount']*abid['winning_percentage']/100;
+                                        }
+                                    }
+                                }
+                                if(bidValue>exposure){
+                                    bidValue=exposure;
+                                }
+                                seatArray.push({seat:i,exposure:exposure});
+                            }
+                        }
+                        amyData['chart']=seatArray;  
+                        amyData['bidValue']=bidValue;
+                        myData['tickets'].push(amyData);
+                    }
+                    //end
+                }
+                socketService.io.to(data.socket_id).emit('partyStatewiseAdmin', myData);  
+            }else{
+                socketService.io.to(data.socket_id).emit('partyStatewiseAdmin', "state/admin not exist");
+            }
+        });
+        
+        // admin candidate bids locationwise
+        socket.on('candidateLocationwiseAdmin', async (data)=>{ // location_id, admin_id
+            var location = await Location.findOne({_id:data.location_id, status:true}, {__v: 0});
+            const users = await User.find({admin_id:data.admin_id, status:true}, {__v: 0});
+            let users_id_array =[];
+            for (const user of users) {
+                users_id_array.push(user['_id']);
+            }
+            if(location && users){
+                let myData:object = location.toObject();
+                myData['tickets']=[];
+                myData['users']=[];
+                const candidates = await Candidate.find({location_id:myData['_id'], status:true}, {__v: 0});
+                
+                // user ids 
+                let candidate_id_array =[];
+                for (const candidate of candidates) {
+                    candidate_id_array.push(candidate['_id']);
+
+                    // tickets
+                    let mticket=await TicketCandidate.findOne({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1}).populate('candidate_id');
+                    if(mticket){
+                        let mTicketData = mticket.toObject();
+                        myData['tickets'].push(mTicketData);
+                    }
+
+                }
+                let tickets = await TicketCandidate.find({candidate_id:{ "$in": candidate_id_array }});
+                let ticket_id_array =[];
+                for (const ticket of tickets) {
+                    ticket_id_array.push(ticket['_id']);
+                }
+                let user_id_array=[];
+                let ubids = await Bid.aggregate([
+                    { $match: {ticket_type:"ticket_candidates", ticket_id:{ "$in": ticket_id_array }, user_id:{ "$in": users_id_array }} },
+                    { $group: { _id: { user_id: "$user_id" }} }
+                ]);
+                for (let ubid of ubids) {
+                    user_id_array.push(ubid['_id']['user_id']);
+                }
+
+                // user chart or users array
+                for (const user_id of user_id_array) {
+                    var user = await User.findOne({_id:user_id}, {__v: 0});
+                    let myUserData:object = user.toObject();
+                    myUserData['tickets']=[];
+                    for (const candidate of candidates) {
+                        // get ticket total yes or no winning amount
+                        let mainValue=0;
+                        let allTicket=await TicketCandidate.find({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1})
+                        for (const aticket of allTicket) {
+                            let abids = await Bid.find({user_id:user_id, ticket_type:"ticket_candidates", ticket_id:aticket['_id']}).sort({created_at: -1});
+                            for (let abid of abids) {
+                                if(abid['yes_or_no']=="yes"){
+                                    mainValue+=abid['bid_amount']*abid['winning_percentage']/100;
+                                }else {
+                                    mainValue-=abid['bid_amount']*abid['winning_percentage']/100;
+                                }
+                            }
+                        }
+                        // subtract other candidate ticket of same location value
+                        let allOtherTicket=await TicketCandidate.find({candidate_id: { $ne: candidate['_id'] }, location_id:data.location_id, status:true}, {__v: 0}).sort({created_at: -1})
+                        for (const oticket of allOtherTicket) {
+                            let ybids = await Bid.find({user_id:user_id, ticket_type:"ticket_candidates", ticket_id:oticket['_id']}).sort({created_at: -1}).populate('ticket_id');
+                            for (let ybid of ybids) {
+                                if(ybid['yes_or_no']=="yes"){
+                                    mainValue-=ybid['bid_amount'];
+                                }else{
+                                    mainValue+=ybid['bid_amount'];
+                                }
+                            }
+                        }
+
+                        let tticket=await TicketCandidate.findOne({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1}).populate('candidate_id');
+                        if(tticket){
+                            let amyData = tticket.toObject();
+                            amyData['mainValue']=mainValue;
+                            myUserData['tickets'].push(amyData);
+                            
+                        }
+                    }
+                    myData['users'].push(myUserData);
+                }
+                socketService.io.to(data.socket_id).emit('candidateLocationwiseAdmin', myData);
+            }else{
+                socketService.io.to(data.socket_id).emit('candidateLocationwiseAdmin', 'Location Not Exist');
+            }
+        });
+
+
+                                            // SUPERADMIN
+         // state wise tickets for superadmin
+         socket.on('partyStatewiseSuperAdmin', async (data)=>{ // state_id, user_id
             let state = await State.findOne({_id:data.state_id, status:true}, {__v: 0});
             if(state){
                 let myData:object = state.toObject();
@@ -571,161 +750,97 @@ export class SocketHandler{
                     for (const aticket of allTicket) {
                         let amyData = aticket.toObject();
                         let bidValue=0;
-                        let user_id_array=[];
-                        let popup_array=[];
-                        let ubids = await Bid.aggregate([
-                            { $match: {ticket_type:"tickets", ticket_id:aticket['_id']} },
-                            { $group: { _id: { user_id: "$user_id" }} }
-                        ]);
-                        for (let ubid of ubids) {
-                            user_id_array.push(ubid['_id']['user_id']);
-                        }
-                        for (const user_id of user_id_array) {
-                            let abids = await Bid.find({user_id:user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
-                            for (const abid of abids) {
-                                let popup_obj:any={};
-                                if(abid['yes_or_no']=="yes"){
-
-                                    // popup
-                                    let objIndex = popup_array.findIndex((obj => obj.id == abid['seat']));
-                                    if(objIndex==-1){
-                                        popup_obj.yes_or_no="yes";
-                                        popup_obj.id=abid['seat'];
-                                        popup_obj.winning_percentage=abid['winning_percentage'];
-                                        popup_obj.bid_amount=abid['bid_amount'];
-                                        popup_array.push(popup_obj);
-                                    }else{
-                                        popup_array[objIndex].bid_amount+=abid['bid_amount'];
-                                    }
-                                    // end popup
-
-                                    bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
-                                }else {
-                                    
-                                    // popup
-                                    let objIndex = popup_array.findIndex((obj => obj.id == abid['seat']));
-                                    if(objIndex==-1){
-                                        popup_obj.yes_or_no="no";
-                                        popup_obj.id=abid['seat'];
-                                        popup_obj.winning_percentage=abid['winning_percentage'];
-                                        popup_obj.bid_amount=abid['bid_amount'];
-                                        popup_array.push(popup_obj);
-                                    }else{
-                                        popup_array[objIndex].bid_amount+=abid['bid_amount'];
-                                    }
-                                    // end popup
-
-                                    let no_seat=abid['seat']+1;
-                                    let yebids = await Bid.find({yes_or_no:"yes",seat: { $lte: no_seat}, user_id:user_id, ticket_type:"tickets", ticket_id:aticket['_id']}).sort({created_at: -1});
-                                    
-                                    if(yebids&&yebids.length>0){
-                                        bidValue-=abid['bid_amount']*abid['winning_percentage']/100;
-                                    }else{
-                                        bidValue+=abid['bid_amount']*abid['winning_percentage']/100;
-                                    }
-                                    
-                                }
-                                //console.log(popup_obj);
-                            }
-                        }
-                        amyData['bidValue']=bidValue;
-                        amyData['popup_array']=popup_array;
-                        let popup_array_new=[];
-                        for (const popa of popup_array) {
-                            
-                            for (const popr of popup_array) {
-                                
-                                if(popr['id']!=popa['id']){
-
-                                    if(popa['yes_or_no']=="no"){
-                                        if(popr['yes_or_no']=="no" && popr['id']>popa['id']){
-                                            popa['bid_amount']+=popr['bid_amount'];
-                                        }else if(popr['yes_or_no']=="yes" && popr['id']<popa['id']){
-                                            popa['bid_amount']-=popr['bid_amount'];
-                                        }
-                                    }else{
-                                        if(popr['yes_or_no']=="yes" && popr['id']<popa['id']){
-                                            popa['bid_amount']+=popr['bid_amount'];
-                                        }else if(popr['yes_or_no']=="no" && popr['id']>popa['id']){
-                                            popa['bid_amount']-=popr['bid_amount'];
-                                        }
-                                    }
-                                }
-                                
-                            }
-                            popup_array_new.push(popa);
-                            
-                        }
-                        popup_array_new.sort((a, b) => {
-                            return a.id - b.id;
-                        });
-                        let j=0;
-                        let popup_array_new2=[];
-                        for (const pan of popup_array_new) {
-                            if(j>0){
-                                let m=pan['id'];
-                                //console.log(l);
-                                //console.log(popup_array_new[j-1]['id']);
-                               // for(let k=pan['id'];k<popup_array_new[j-1]['id']+1;k--){
-                                 //   console.log(k);
-                                    // popup_array_new2.push(
-                                    //     {
-                                    //         id:k,
-                                    //         bid_amount:pan['bid_amount']
-                                    //     }
-                                    // );
-                                //}
-                                
-                                // while (m < popup_array_new[j-1]['id']+1) {
-                                //     console.log(m);
-                                //     m--;
-                                //     popup_array_new2.push(
-                                //         {
-                                //             id:m,
-                                //             bid_amount:pan['bid_amount']
-                                //         }   
-                                //     );
-                                // }
-                            }
-                            j++;
-                        }
-                        amyData['popup_array_new']=popup_array_new;
-                        amyData['popup_array_new2']=popup_array_new2;
-                        myData['tickets'].push(amyData);
+                        let abids = await Bid.find({ticket_type:"tickets", ticket_id:aticket['_id']},{yes_or_no:1, seat:1, bid_amount:1, winning_percentage:1}).sort({created_at: -1});
                         
+                        let min_bids = await Bid.findOne({ticket_type:"tickets", ticket_id:aticket['_id']}).sort({seat: 1});
+                        let max_bids = await Bid.findOne({ticket_type:"tickets", ticket_id:aticket['_id']}).sort({seat: -1});
+                        let seatArray=[];
+                        if(min_bids && max_bids){
+                            let min_num=min_bids['seat']-20>0 ? min_bids['seat']-20 : 1;
+                            let max_num=min_bids['seat']+20;
+                            
+                            for(let i:number=min_num;i<=max_num;i++){
+                                let exposure=0;
+                                for (const abid of abids) {
+
+                                    if(abid['yes_or_no']=="yes"){
+                                        if(i>=abid['seat']){
+                                            exposure+=abid['bid_amount']*abid['winning_percentage']/100;
+                                        }else{
+                                            exposure-=abid['bid_amount'];
+                                        }
+                                    }else{
+                                        if(i<abid['seat']){
+                                            exposure+=abid['bid_amount'];
+                                        }else{
+                                            exposure-=abid['bid_amount']*abid['winning_percentage']/100;
+                                        }
+                                    }
+                                }
+                                if(bidValue>exposure){
+                                    bidValue=exposure;
+                                }
+                                seatArray.push({seat:i,exposure:exposure});
+                            }
+                        }
+                        amyData['chart']=seatArray;  
+                        amyData['bidValue']=bidValue;
+                        myData['tickets'].push(amyData);
                     }
                     //end
                 }
-                socketService.io.emit('partyStatewiseAdmin', myData);  
+                socketService.io.to(data.socket_id).emit('partyStatewiseSuperAdmin', myData);  
             }else{
-                socketService.io.emit('partyStatewiseAdmin', "state not exist");
+                socketService.io.to(data.socket_id).emit('partyStatewiseSuperAdmin', "state not exist");
             }
         });
-
-        // admin candidate bids locationwise
-        socket.on('candidateLocationwiseAdmin', async (data)=>{ // location_id, user_id
+        
+        // superadmin candidate bids locationwise
+        socket.on('candidateLocationwiseSuperAdmin', async (data)=>{ // location_id, user_id
             var location = await Location.findOne({_id:data.location_id, status:true}, {__v: 0});
             if(location){
                 let myData:object = location.toObject();
                 myData['tickets']=[];
+                myData['users']=[];
                 const candidates = await Candidate.find({location_id:myData['_id'], status:true}, {__v: 0});
+                
+                // user ids 
                 let candidate_id_array =[];
                 for (const candidate of candidates) {
                     candidate_id_array.push(candidate['_id']);
 
-                    // get ticket total yes or no winning amount
-                    let mainValue=0;
-                    let allTicket=await TicketCandidate.find({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1});
-    
-                    for (const aticket of allTicket) {
-                        let user_id_array =[];
-                        let ubids = await Bid.find({ticket_type:"ticket_candidates", ticket_id:aticket['_id']}).sort({created_at: -1});
-                        for (const ubid of ubids) {
-                            if(user_id_array.includes(ubid['user_id'])==false){
-                                user_id_array.push(ubid['user_id']);
-                            }
-                        }
-                        for (const user_id of user_id_array) {
+                    // tickets
+                    let mticket=await TicketCandidate.findOne({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1}).populate('candidate_id');
+                    if(mticket){
+                        let mTicketData = mticket.toObject();
+                        myData['tickets'].push(mTicketData);
+                    }
+
+                }
+                let tickets = await TicketCandidate.find({candidate_id:{ "$in": candidate_id_array }});
+                let ticket_id_array =[];
+                for (const ticket of tickets) {
+                    ticket_id_array.push(ticket['_id']);
+                }
+                let user_id_array=[];
+                let ubids = await Bid.aggregate([
+                    { $match: {ticket_type:"ticket_candidates",  ticket_id:{ "$in": ticket_id_array }} },
+                    { $group: { _id: { user_id: "$user_id" }} }
+                ]);
+                for (let ubid of ubids) {
+                    user_id_array.push(ubid['_id']['user_id']);
+                }
+
+                // user chart or users array
+                for (const user_id of user_id_array) {
+                    var user = await User.findOne({_id:user_id}, {__v: 0});
+                    let myUserData:object = user.toObject();
+                    myUserData['tickets']=[];
+                    for (const candidate of candidates) {
+                        // get ticket total yes or no winning amount
+                        let mainValue=0;
+                        let allTicket=await TicketCandidate.find({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1})
+                        for (const aticket of allTicket) {
                             let abids = await Bid.find({user_id:user_id, ticket_type:"ticket_candidates", ticket_id:aticket['_id']}).sort({created_at: -1});
                             for (let abid of abids) {
                                 if(abid['yes_or_no']=="yes"){
@@ -734,42 +849,33 @@ export class SocketHandler{
                                     mainValue-=abid['bid_amount']*abid['winning_percentage']/100;
                                 }
                             }
-                            // subtract other candidate ticket of same location value
-                            let allOtherTicket=await TicketCandidate.find({candidate_id: { $ne: candidate['_id'] }, location_id:data.location_id, status:true}, {__v: 0}).sort({created_at: -1})
-                            for (const oticket of allOtherTicket) {
-                                let ybids = await Bid.find({user_id:user_id, ticket_type:"ticket_candidates", ticket_id:oticket['_id']}).sort({created_at: -1}).populate('ticket_id');
-                                for (let ybid of ybids) {
-                                    if(ybid['yes_or_no']=="yes"){
-                                        mainValue-=ybid['bid_amount'];
-                                    }else{
-                                        mainValue+=ybid['bid_amount'];
-                                    }
+                        }
+                        // subtract other candidate ticket of same location value
+                        let allOtherTicket=await TicketCandidate.find({candidate_id: { $ne: candidate['_id'] }, location_id:data.location_id, status:true}, {__v: 0}).sort({created_at: -1})
+                        for (const oticket of allOtherTicket) {
+                            let ybids = await Bid.find({user_id:user_id, ticket_type:"ticket_candidates", ticket_id:oticket['_id']}).sort({created_at: -1}).populate('ticket_id');
+                            for (let ybid of ybids) {
+                                if(ybid['yes_or_no']=="yes"){
+                                    mainValue-=ybid['bid_amount'];
+                                }else{
+                                    mainValue+=ybid['bid_amount'];
                                 }
                             }
                         }
-                    }
-                    console.log(mainValue);
-                    let tticket=await TicketCandidate.findOne({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1}).populate('candidate_id');
-                    if(tticket){
-                        let amyData = tticket.toObject();
-                        amyData['mainValue']=mainValue;
-                        myData['tickets'].push(amyData);
-                    }
-                }
 
-                let tickets = await TicketCandidate.find({candidate_id:{ "$in": candidate_id_array }});
-                let ticket_id_array =[];
-                for (const ticket of tickets) {
-                    ticket_id_array.push(ticket['_id']);
+                        let tticket=await TicketCandidate.findOne({candidate_id:candidate['_id'], status:true}, {__v: 0}).sort({created_at: -1}).populate('candidate_id');
+                        if(tticket){
+                            let amyData = tticket.toObject();
+                            amyData['mainValue']=mainValue;
+                            myUserData['tickets'].push(amyData);
+                            
+                        }
+                    }
+                    myData['users'].push(myUserData);
                 }
-
-                let bids = await Bid.find({ticket_type:"ticket_candidates", ticket_id:{ "$in": ticket_id_array }}).sort({created_at: -1}).populate([
-                    { path:'ticket_id', populate:{ path: "candidate_id", populate: { path: "state_id" } }}
-                ]);
-                myData['bids']=bids;
-                socketService.io.emit('candidateLocationwiseAdmin', myData);
+                socketService.io.to(data.socket_id).emit('candidateLocationwiseSuperAdmin', myData);
             }else{
-                socketService.io.emit('candidateLocationwiseAdmin', 'Location Not Exist');
+                socketService.io.to(data.socket_id).emit('candidateLocationwiseSuperAdmin', 'Location Not Exist');
             }
         });
 

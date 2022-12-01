@@ -61,6 +61,20 @@ export class StateController {
         }
     }
 
+    static async allAdminState(req, res, next){
+
+        try {
+            const state = await State.find();
+            const data = {
+                message : 'Success',
+                data:state
+            }; 
+            res.json(data);
+        } catch (e) {
+            next(e)
+        }
+    }
+
     static async allStateWithTicket(req, res, next){
 
         try {
