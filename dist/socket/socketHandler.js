@@ -49,7 +49,7 @@ class SocketHandler {
         }));
         // Location Via State
         socket.on('locationViaStateId', (data) => __awaiter(this, void 0, void 0, function* () {
-            let location = yield Location_1.default.find({ state_id: data.state_id }, { __v: 0 });
+            let location = yield Location_1.default.find({ state_id: data.state_id, status: true, result_declare_status: false }, { __v: 0 });
             if (location) {
                 socketService_1.socketService.io.to(data.socket_id).emit('locationViaStateId', location);
             }
@@ -95,10 +95,10 @@ class SocketHandler {
                                         }
                                         else {
                                             if (i < abid['seat']) {
-                                                exposure += abid['bid_amount'] * 100 / abid['winning_percentage'];
+                                                exposure += abid['bid_amount'];
                                             }
                                             else {
-                                                let add_value = abid['bid_amount'];
+                                                let add_value = abid['bid_amount'] * abid['winning_percentage'] / 100;
                                                 exposure -= add_value;
                                             }
                                         }
@@ -324,10 +324,10 @@ class SocketHandler {
                                     }
                                     else {
                                         if (i < abid['seat']) {
-                                            exposure += abid['bid_amount'] * 100 / abid['winning_percentage'];
+                                            exposure += abid['bid_amount'];
                                         }
                                         else {
-                                            let add_value = abid['bid_amount'];
+                                            let add_value = abid['bid_amount'] * abid['winning_percentage'] / 100;
                                             exposure -= add_value;
                                         }
                                     }

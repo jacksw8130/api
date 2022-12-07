@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     location                    : {type: String, required: false},
     wallet                      : {type: Number, required: true, default: 0},
     balance                     : {type: Number, required: true, default: 0},
+    exposure                    : {type: Number, required: true, default: 0},
     bid_status                  : {type: Boolean, required: true, default: true},
     password_status             : {type: Boolean, required: true, default: false},
     status                      : {type: Boolean, required: true, default: true},

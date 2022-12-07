@@ -3,6 +3,7 @@ import Party from "../../models/Party";
 import User from "../../models/User";
 import Ticket from "../../models/Ticket";
 import TicketCandidate from "../../models/TicketCandidate";
+import BidButton from "../../models/BidButton";
 
 export class UserValidators{
 
@@ -166,6 +167,60 @@ export class UserValidators{
                     }),
                 ];
         
+    }
+
+    // Buttons
+
+    static createButton(){
+
+        return  [   
+                    body('label', 'Button label Is Required').custom((label, {req})=>{
+                        return  BidButton.findOne({label:label, user_id:req.user.user_id}).then(bidButton => {
+                                    if(bidButton){
+                                        throw new Error('Bid Button Label Already Exist');
+                                    }else{
+                                        return true;
+                                    }
+                                })
+                    }),
+                    body('value', 'Button value Is Required').custom((value, {req})=>{
+                        return  BidButton.findOne({value:value, user_id:req.user.user_id}).then(bidButton => {
+                                    if(bidButton){
+                                        throw new Error('Bid Button Value Already Exist');
+                                    }else{
+                                        return true;
+                                    }
+                                })
+                    })
+    
+                ];
+        
+    }
+
+    static updateButton() {
+        return [param('id').custom((id, {req}) => {
+            return BidButton.findOne({_id: id, user_id:req.user.user_id}, {__v: 0}).then((bidButton) => {
+                if (bidButton) {
+                    req.bidButton = bidButton;
+                    return true;
+                } else {
+                    throw new Error('bid Button Does Not Exist');
+                }
+            })
+        })]
+    }
+
+    static deleteButton() {
+        return [param('id').custom((id, {req}) => {
+            return BidButton.findOne({_id: id, user_id:req.user.user_id}, {__v: 0}).then((bidButton) => {
+                if (bidButton) {
+                    req.bidButton = bidButton;
+                    return true;
+                } else {
+                    throw new Error('bid Button Does Not Exist');
+                }
+            })
+        })]
     }
 
 

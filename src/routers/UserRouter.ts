@@ -18,6 +18,9 @@ class UserRouter {
         this.router.get('/data', GlobalMiddleWare.authenticate, UserController.userData);
         this.router.get('/transaction', GlobalMiddleWare.authenticate, UserController.transaction);
         this.router.get('/all_bid', GlobalMiddleWare.authenticate, UserController.allBid);
+
+        // button
+        this.router.get('/bid_button/all', GlobalMiddleWare.authenticate, UserController.buttons);
     }
     postRoutes(){
         // session
@@ -25,14 +28,21 @@ class UserRouter {
         this.router.post('/password/change', GlobalMiddleWare.authenticate, UserValidators.passwordChange(), GlobalMiddleWare.checkError, UserController.passwordChange);
         this.router.post('/bid', GlobalMiddleWare.authenticate, UserValidators.bid(), GlobalMiddleWare.checkError, UserController.bid);
         this.router.post('/bid_candidate', GlobalMiddleWare.authenticate, UserValidators.bid_candidate(), GlobalMiddleWare.checkError, UserController.bid_candidate);
+
+        // button
+        this.router.post('/bid_button/create', UserValidators.createButton(), GlobalMiddleWare.checkError, GlobalMiddleWare.authenticate, UserController.createButton);
     }
     patchRoutes(){
         this.router.patch('/update', GlobalMiddleWare.authenticate, UserController.profile);
-        //this.router.patch('/update/:id', GlobalMiddleWare.ownerAuthenticate, UserValidators.update(), GlobalMiddleWare.checkError, UserController.update);
+
+        // button
+        this.router.patch('/bid_button/update/:id', GlobalMiddleWare.authenticate, UserValidators.updateButton(), GlobalMiddleWare.checkError, UserController.updateButton);
     }
 
     deleteRoutes(){
         //this.router.delete('/delete/:id', GlobalMiddleWare.authenticate, UserValidators.deleteUser(), GlobalMiddleWare.checkError, UserController.deleteUser);
+        // button
+        this.router.delete('/bid_button/delete/:id', GlobalMiddleWare.authenticate, UserValidators.deleteButton(), GlobalMiddleWare.checkError, UserController.deleteButton);
     }
 }
 

@@ -10,4 +10,8 @@ export declare class UserController {
     static deleteUser(req: any, res: any, next: any): Promise<void>;
     static bid(req: any, res: any, next: any): Promise<void>;
     static bid_candidate(req: any, res: any, next: any): Promise<void>;
+    static buttons(req: any, res: any, next: any): Promise<void>;
+    static createButton(req: any, res: any, next: any): Promise<void>;
+    static updateButton(req: any, res: any, next: any): Promise<void>;
+    static deleteButton(req: any, res: any, next: any): Promise<void>;
 }

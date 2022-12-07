@@ -48,7 +48,7 @@ class LocationController {
             }
         });
     }
-    static result(req, res, next) {
+    static resultOld(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const locationId = req.location._id;
             try {
@@ -125,6 +125,107 @@ class LocationController {
                                     else {
                                         yield Bid_1.default.findOneAndUpdate({ _id: bid['_id'] }, { result_declare_status: true, winning_amount: 0, bid_status: "loss" }, { new: true, useFindAndModify: false });
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+                res.json({
+                    message: 'Location Result Declared Successfully',
+                    data: location,
+                    status_code: 200
+                });
+            }
+            catch (e) {
+                next(e);
+            }
+        });
+    }
+    static result(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const locationId = req.location._id;
+            try {
+                // update location winning_seats
+                const location = yield Location_1.default.findOneAndUpdate({ _id: locationId }, { candidate_winner_id: req.body.candidate_winner_id, result_declare_status: true }, { new: true, useFindAndModify: false });
+                if (location) {
+                    let candidate_winner_id = location['candidate_winner_id'];
+                    if (candidate_winner_id) {
+                        // All ticket of this location
+                        let tickets = yield TicketCandidate_1.default.find({ location_id: location['_id'] }, { __v: 0 });
+                        for (const ticket of tickets) {
+                            // update yes/no result
+                            if (ticket['candidate_id'] == candidate_winner_id) {
+                                yield TicketCandidate_1.default.findOneAndUpdate({ _id: ticket['_id'] }, { yes_result: true, no_result: false, result_declare_status: true }, { new: true, useFindAndModify: false });
+                            }
+                            else {
+                                yield TicketCandidate_1.default.findOneAndUpdate({ _id: ticket['_id'] }, { yes_result: false, no_result: true, result_declare_status: true }, { new: true, useFindAndModify: false });
+                            }
+                            // find all users who bid in this ticket
+                            let user_id_array = [];
+                            let ubids = yield Bid_1.default.aggregate([
+                                { $match: { ticket_type: "ticket_candidates", ticket_id: ticket['_id'] } },
+                                { $group: { _id: { user_id: "$user_id" } } }
+                            ]);
+                            for (let ubid of ubids) {
+                                user_id_array.push(ubid['_id']['user_id']);
+                            }
+                            // ticket result per user wise
+                            for (const user_id of user_id_array) {
+                                let winning_amount = 0;
+                                let user_data = yield User_1.default.findOne({ _id: user_id });
+                                // Bid/Transaction Update
+                                const bids = yield Bid_1.default.find({ ticket_type: "ticket_candidates", ticket_id: ticket._id, result_declare_status: false, bid_status: "pending" });
+                                for (const bid of bids) {
+                                    // update yes_seats
+                                    if (bid['yes_or_no'] == "yes") {
+                                        if (ticket['yes_result'] == true) {
+                                            // winning amount
+                                            let win_amount = bid['bid_amount'] * bid['winning_percentage'] / 100;
+                                            winning_amount += win_amount;
+                                            // update bid
+                                            yield Bid_1.default.findOneAndUpdate({ _id: bid['_id'] }, { result_declare_status: true, winning_amount: win_amount, bid_status: "win" }, { new: true, useFindAndModify: false });
+                                        }
+                                        else {
+                                            // loss amount
+                                            let loss_amount = bid['bid_amount'];
+                                            winning_amount -= loss_amount;
+                                            // update bid
+                                            yield Bid_1.default.findOneAndUpdate({ _id: bid['_id'] }, { result_declare_status: true, winning_amount: -loss_amount, bid_status: "loss" }, { new: true, useFindAndModify: false });
+                                        }
+                                    }
+                                    else {
+                                        if (ticket['no_result'] == true) {
+                                            // winning amount
+                                            let win_amount = bid['bid_amount'];
+                                            winning_amount += win_amount;
+                                            // update bid
+                                            yield Bid_1.default.findOneAndUpdate({ _id: bid['_id'] }, { result_declare_status: true, winning_amount: win_amount, bid_status: "win" }, { new: true, useFindAndModify: false });
+                                        }
+                                        else {
+                                            // loss amount
+                                            let loss_amount = bid['bid_amount'] * bid['winning_percentage'] / 100;
+                                            winning_amount -= loss_amount;
+                                            // update bid
+                                            yield Bid_1.default.findOneAndUpdate({ _id: bid['_id'] }, { result_declare_status: true, winning_amount: -loss_amount, bid_status: "loss" }, { new: true, useFindAndModify: false });
+                                        }
+                                    }
+                                }
+                                // create transaction
+                                let to_balance = user_data['balance'] + winning_amount;
+                                const idata = {
+                                    to: 'users',
+                                    to_id: user_id,
+                                    to_balance: to_balance,
+                                    mode: "bidding",
+                                    coins: winning_amount,
+                                    ticket_id: ticket['_id'],
+                                    ticket_type: "ticket_candidates",
+                                    created_at: new Utils_1.Utils().indianTimeZone,
+                                    updated_at: new Utils_1.Utils().indianTimeZone
+                                };
+                                let walletTransaction = yield new WalletTransaction_1.default(idata).save();
+                                if (walletTransaction) {
+                                    yield User_1.default.findOneAndUpdate({ _id: user_id }, { $inc: { balance: winning_amount } }, { new: true, useFindAndModify: false });
                                 }
                             }
                         }

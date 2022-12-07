@@ -3,7 +3,7 @@ import { Server } from "./server";
 let server = new Server()
 const app = server.app;
 
-let port =  process.env.PORT || 2200;
+let port =  process.env.PORT || 2100;
 
 export const myServer = app.listen(port, ()=>{
     console.log(`Election : PORT ${port}`);

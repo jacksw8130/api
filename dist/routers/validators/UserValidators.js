@@ -14,6 +14,7 @@ const express_validator_1 = require("express-validator");
 const User_1 = require("../../models/User");
 const Ticket_1 = require("../../models/Ticket");
 const TicketCandidate_1 = require("../../models/TicketCandidate");
+const BidButton_1 = require("../../models/BidButton");
 class UserValidators {
     static login() {
         return [(0, express_validator_1.query)('code', 'Code is Required')
@@ -170,6 +171,57 @@ class UserValidators {
                 });
             }),
         ];
+    }
+    // Buttons
+    static createButton() {
+        return [
+            (0, express_validator_1.body)('label', 'Button label Is Required').custom((label, { req }) => {
+                return BidButton_1.default.findOne({ label: label, user_id: req.user.user_id }).then(bidButton => {
+                    if (bidButton) {
+                        throw new Error('Bid Button Label Already Exist');
+                    }
+                    else {
+                        return true;
+                    }
+                });
+            }),
+            (0, express_validator_1.body)('value', 'Button value Is Required').custom((value, { req }) => {
+                return BidButton_1.default.findOne({ value: value, user_id: req.user.user_id }).then(bidButton => {
+                    if (bidButton) {
+                        throw new Error('Bid Button Value Already Exist');
+                    }
+                    else {
+                        return true;
+                    }
+                });
+            })
+        ];
+    }
+    static updateButton() {
+        return [(0, express_validator_1.param)('id').custom((id, { req }) => {
+                return BidButton_1.default.findOne({ _id: id, user_id: req.user.user_id }, { __v: 0 }).then((bidButton) => {
+                    if (bidButton) {
+                        req.bidButton = bidButton;
+                        return true;
+                    }
+                    else {
+                        throw new Error('bid Button Does Not Exist');
+                    }
+                });
+            })];
+    }
+    static deleteButton() {
+        return [(0, express_validator_1.param)('id').custom((id, { req }) => {
+                return BidButton_1.default.findOne({ _id: id, user_id: req.user.user_id }, { __v: 0 }).then((bidButton) => {
+                    if (bidButton) {
+                        req.bidButton = bidButton;
+                        return true;
+                    }
+                    else {
+                        throw new Error('bid Button Does Not Exist');
+                    }
+                });
+            })];
     }
 }
 exports.UserValidators = UserValidators;

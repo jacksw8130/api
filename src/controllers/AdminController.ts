@@ -5,6 +5,7 @@ import User from "../models/User";
 import { Utils } from "../utils/Utils";
 import WalletTransaction from "../models/WalletTransaction";
 import Bid from "../models/Bid";
+import BidButton from "../models/BidButton";
 
 export class AdminController {
 
@@ -159,6 +160,14 @@ export class AdminController {
                 updated_at: new Utils().indianTimeZone
             };
             let user = await new User(insert).save();
+            if(user){
+                let buttons = [ { user_id: user['_id'], label:500, value:500},{ user_id: user['_id'], label:1000, value:1000},{ user_id: user['_id'], label:1500, value:1500},
+                                { user_id: user['_id'], label:2000, value:2000},{ user_id: user['_id'], label:2500, value:2500},{ user_id: user['_id'], label:3000, value:3000},
+                                { user_id: user['_id'], label:3500, value:3500},{ user_id: user['_id'], label:4000, value:4000},{ user_id: user['_id'], label:4500, value:4500},
+                                { user_id: user['_id'], label:5000, value:5000}
+                            ];
+                await BidButton.insertMany(buttons);        
+            }
             const data = {
                 message :'Success',
                 data:user
@@ -216,7 +225,7 @@ export class AdminController {
             var user_data = await User.findOne({_id: req.body.user_id});
             var admin_data = await Admin.findOne({_id: req.admin.admin_id});
             const from_balance=Number(admin_data.wallet)-Number(coins);
-            const to_balance=Number(user_data.wallet)+Number(coins);
+            const to_balance=Number(user_data.balance)+Number(coins);
 
             const idata = {
                 from: from,
@@ -262,7 +271,7 @@ export class AdminController {
 
             var user_data = await User.findOne({_id: req.body.user_id});
             var admin_data = await Admin.findOne({_id: req.admin.admin_id});
-            const from_balance=Number(user_data.wallet)-Number(coins);
+            const from_balance=Number(user_data.balance)-Number(coins);
             const to_balance=Number(admin_data.wallet)+Number(coins);
             
             const idata = {
@@ -279,7 +288,7 @@ export class AdminController {
             };
             let walletTransaction = await new WalletTransaction(idata).save();
             if(walletTransaction){
-                var user_wallet = await User.findOneAndUpdate({_id: from_id}, { $inc: { wallet: -coins} }, {new: true, useFindAndModify: false});
+                var user_wallet = await User.findOneAndUpdate({_id: from_id}, { $inc: { balance: -coins} }, {new: true, useFindAndModify: false});
                 var admin_wallet = await Admin.findOneAndUpdate({_id: to_id}, { $inc: { wallet: coins} }, {new: true, useFindAndModify: false});
             }
             const data = {

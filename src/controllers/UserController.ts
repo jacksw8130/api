@@ -1,6 +1,7 @@
 import * as Jwt from "jsonwebtoken";
 import { getEnvironmentVariables } from "../environments/env";
 import Bid from "../models/Bid";
+import BidButton from "../models/BidButton";
 import User from "../models/User";
 import WalletTransaction from "../models/WalletTransaction";
 import { Utils } from "../utils/Utils";
@@ -104,14 +105,23 @@ export class UserController {
     static async transaction(req, res, next){
 
         try {
-            const user = await WalletTransaction.find({$or:[{from_id:req.user.user_id},{to_id:req.user.user_id}]}).sort({created_at: -1}).populate([
+            const user_transactions = await WalletTransaction.find({$or:[{from_id:req.user.user_id},{to_id:req.user.user_id}]}).sort({created_at: -1}).populate([
                 {path:'from_id'},
                 {path:'to_id'},
-                {path:'bid_id'}
+                {path:'ticket_id'}
             ]);
+            let userTransactionWithBids=[];
+            for (const user_transaction of user_transactions) {
+                let myData:object = user_transaction.toObject();
+                if(myData['mode']=="bidding"){
+                    let bids=await Bid.find({ticket_id: myData['ticket_id']["_id"],user_id: req.user.user_id,result_declare_status:true});
+                    myData['ticket_id']['bids']=bids;
+                }
+                userTransactionWithBids.push(myData);
+            }
             const data = {
                 message : 'Success! All Transactions',
-                data:user
+                data:userTransactionWithBids
             };
             res.json(data);
         } catch (e) {
@@ -213,26 +223,24 @@ export class UserController {
         
                     let bid = await new Bid(bdata).save();
                     if(bid){
-                        const from_balance=user_data.wallet-bid_amount;
-                        const idata = {
-                            from: 'users',
-                            from_id: req.user.user_id,
-                            from_balance: from_balance,
-                            mode: "bidding",
-                            coins: bid_amount,
-                            bid_id: bid['_id'],
-                            created_at: new Utils().indianTimeZone,
-                            updated_at: new Utils().indianTimeZone
-                        };
-                        let walletTransaction = await new WalletTransaction(idata).save();
-                        if(walletTransaction){
-                            var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -bid_amount} }, {new: true, useFindAndModify: false});
-                        }
+                        // const from_balance=user_data.wallet-bid_amount;
+                        // const idata = {
+                        //     from: 'users',
+                        //     from_id: req.user.user_id,
+                        //     from_balance: from_balance,
+                        //     mode: "bidding",
+                        //     coins: bid_amount,
+                        //     bid_id: bid['_id'],
+                        //     created_at: new Utils().indianTimeZone,
+                        //     updated_at: new Utils().indianTimeZone
+                        // };
+                        // let walletTransaction = await new WalletTransaction(idata).save();
+                        var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -bid_amount} }, {new: true, useFindAndModify: false});
+                        
                         
                         const data = {
                             message :'Successfully bid on party ticket!',
                             bid:bid,
-                            transaction:walletTransaction,
                             user:user_wallet,
                             status_code:200
         
@@ -259,26 +267,24 @@ export class UserController {
     
                 let bid = await new Bid(bdata).save();
                 if(bid){
-                    const from_balance=user_data.wallet-req.body.bid_amount;
-                    const idata = {
-                        from: 'users',
-                        from_id: req.user.user_id,
-                        from_balance: from_balance,
-                        mode: "bidding",
-                        coins: req.body.bid_amount,
-                        bid_id: bid['_id'],
-                        created_at: new Utils().indianTimeZone,
-                        updated_at: new Utils().indianTimeZone
-                    };
-                    let walletTransaction = await new WalletTransaction(idata).save();
-                    if(walletTransaction){
-                        var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -req.body.bid_amount} }, {new: true, useFindAndModify: false});
-                    }
+                    // const from_balance=user_data.wallet-req.body.bid_amount;
+                    // const idata = {
+                    //     from: 'users',
+                    //     from_id: req.user.user_id,
+                    //     from_balance: from_balance,
+                    //     mode: "bidding",
+                    //     coins: req.body.bid_amount,
+                    //     bid_id: bid['_id'],
+                    //     created_at: new Utils().indianTimeZone,
+                    //     updated_at: new Utils().indianTimeZone
+                    // };
+                    // let walletTransaction = await new WalletTransaction(idata).save();
+                    var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -req.body.bid_amount} }, {new: true, useFindAndModify: false});
+                    
                     
                     const data = {
                         message :'Successfully bid on party ticket!',
                         bid:bid,
-                        transaction:walletTransaction,
                         user:user_wallet,
                         status_code:200
     
@@ -316,26 +322,24 @@ export class UserController {
         
                     let bid = await new Bid(bdata).save();
                     if(bid){
-                        const from_balance=user_data.wallet-bid_amount;
-                        const idata = {
-                            from: 'users',
-                            from_id: req.user.user_id,
-                            from_balance: from_balance,
-                            mode: "bidding",
-                            coins: req.body.bid_amount,
-                            bid_id: bid['_id'],
-                            created_at: new Utils().indianTimeZone,
-                            updated_at: new Utils().indianTimeZone
-                        };
-                        let walletTransaction = await new WalletTransaction(idata).save();
-                        if(walletTransaction){
-                            var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -bid_amount} }, {new: true, useFindAndModify: false});
-                        }
+                        // const from_balance=user_data.wallet-bid_amount;
+                        // const idata = {
+                        //     from: 'users',
+                        //     from_id: req.user.user_id,
+                        //     from_balance: from_balance,
+                        //     mode: "bidding",
+                        //     coins: req.body.bid_amount,
+                        //     bid_id: bid['_id'],
+                        //     created_at: new Utils().indianTimeZone,
+                        //     updated_at: new Utils().indianTimeZone
+                        // };
+                        // let walletTransaction = await new WalletTransaction(idata).save();
+                        var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -bid_amount} }, {new: true, useFindAndModify: false});
+                        
                         
                         const data = {
                             message :'Successfully bid on candidate!',
                             bid:bid,
-                            transaction:walletTransaction,
                             user:user_wallet,
                             status_code:200
         
@@ -361,26 +365,24 @@ export class UserController {
     
                 let bid = await new Bid(bdata).save();
                 if(bid){
-                    const from_balance=user_data.wallet-req.body.bid_amount;
-                    const idata = {
-                        from: 'users',
-                        from_id: req.user.user_id,
-                        from_balance: from_balance,
-                        mode: "bidding",
-                        coins: req.body.bid_amount,
-                        bid_id: bid['_id'],
-                        created_at: new Utils().indianTimeZone,
-                        updated_at: new Utils().indianTimeZone
-                    };
-                    let walletTransaction = await new WalletTransaction(idata).save();
-                    if(walletTransaction){
-                        var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -req.body.bid_amount} }, {new: true, useFindAndModify: false});
-                    }
+                    // const from_balance=user_data.wallet-req.body.bid_amount;
+                    // const idata = {
+                    //     from: 'users',
+                    //     from_id: req.user.user_id,
+                    //     from_balance: from_balance,
+                    //     mode: "bidding",
+                    //     coins: req.body.bid_amount,
+                    //     bid_id: bid['_id'],
+                    //     created_at: new Utils().indianTimeZone,
+                    //     updated_at: new Utils().indianTimeZone
+                    // };
+                    // let walletTransaction = await new WalletTransaction(idata).save();
+                    var user_wallet = await User.findOneAndUpdate({_id: req.user.user_id}, { $inc: { wallet: -req.body.bid_amount} }, {new: true, useFindAndModify: false});
+                    
                     
                     const data = {
                         message :'Successfully bid on candidate!',
                         bid:bid,
-                        transaction:walletTransaction,
                         user:user_wallet,
                         status_code:200
     
@@ -390,6 +392,75 @@ export class UserController {
             }
 
             
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    // Buttons
+
+    static async buttons(req, res, next){
+        try {
+            let bidButton = await BidButton.find({user_id:req.user.user_id}).sort({ value: 1 });
+
+            const data = {
+                message : 'Success',
+                data:bidButton,
+            };
+            res.json(data);
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static async createButton(req, res, next){  
+
+        try {
+
+            let bidCount= await BidButton.countDocuments({user_id:req.user.user_id});
+            if(bidCount>10){
+                throw new Error('Sorry! Only 10 Buttons are aloowed');
+            }else{
+                let bidButton:any = await new BidButton({...req.body, user_id:req.user.user_id}).save();
+                res.json({
+                    message:'Bid Button Save Successfully',
+                    data:bidButton,
+                    status_code:200
+                });
+            }
+
+            
+
+        } catch (e) {
+            next(e)
+        }
+        
+   
+    }
+
+    static async updateButton(req, res, next) {
+        const bidButtonId = req.bidButton._id;
+        try {
+            const bidButton = await BidButton.findOneAndUpdate({_id: bidButtonId}, req.body, {new: true, useFindAndModify: false});
+            res.json({
+                message:'Bid Button Updated Successfully',
+                data:bidButton,
+                status_code:200
+            });
+        } catch (e) {
+            next(e);
+        }
+
+    }
+
+    static async deleteButton(req, res, next) {
+        const bidButton = req.bidButton;
+        try {
+            await bidButton.remove();
+            res.json({
+                message:'Success ! bidButton Deleted Successfully',
+                status_code: 200
+            });
         } catch (e) {
             next(e);
         }

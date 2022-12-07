@@ -1,6 +1,7 @@
 export declare class LocationController {
     static create(req: any, res: any, next: any): Promise<void>;
     static update(req: any, res: any, next: any): Promise<void>;
+    static resultOld(req: any, res: any, next: any): Promise<void>;
     static result(req: any, res: any, next: any): Promise<void>;
     static Location(req: any, res: any, next: any): Promise<void>;
     static stateLocation(req: any, res: any, next: any): Promise<void>;

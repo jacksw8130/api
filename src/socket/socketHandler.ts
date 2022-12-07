@@ -50,7 +50,7 @@ export class SocketHandler{
         socket.on('locationViaStateId', async (data)=>{ // state_id, socket_id
             
             
-            let location = await Location.find({state_id:data.state_id}, {__v: 0});
+            let location = await Location.find({state_id:data.state_id, status:true, result_declare_status:false}, {__v: 0});
             if(location){
                 socketService.io.to(data.socket_id).emit('locationViaStateId', location);
             }else{
@@ -96,9 +96,9 @@ export class SocketHandler{
                                             }
                                         }else{
                                             if(i<abid['seat']){
-                                                exposure+=abid['bid_amount']*100/abid['winning_percentage'];
+                                                exposure+=abid['bid_amount'];
                                             }else{
-                                                let add_value=abid['bid_amount']
+                                                let add_value=abid['bid_amount']*abid['winning_percentage']/100;
                                                 exposure-=add_value;
                                             }
                                         }
@@ -349,9 +349,9 @@ export class SocketHandler{
                                         }
                                     }else{
                                         if(i<abid['seat']){
-                                            exposure+=abid['bid_amount']*100/abid['winning_percentage'];
+                                            exposure+=abid['bid_amount'];
                                         }else{
-                                            let add_value=abid['bid_amount']
+                                            let add_value=abid['bid_amount']*abid['winning_percentage']/100;
                                             exposure-=add_value;
                                         }
                                     }

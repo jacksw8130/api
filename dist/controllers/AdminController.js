@@ -17,6 +17,7 @@ const User_1 = require("../models/User");
 const Utils_1 = require("../utils/Utils");
 const WalletTransaction_1 = require("../models/WalletTransaction");
 const Bid_1 = require("../models/Bid");
+const BidButton_1 = require("../models/BidButton");
 class AdminController {
     static login(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -165,6 +166,14 @@ class AdminController {
                     updated_at: new Utils_1.Utils().indianTimeZone
                 };
                 let user = yield new User_1.default(insert).save();
+                if (user) {
+                    let buttons = [{ user_id: user['_id'], label: 500, value: 500 }, { user_id: user['_id'], label: 1000, value: 1000 }, { user_id: user['_id'], label: 1500, value: 1500 },
+                        { user_id: user['_id'], label: 2000, value: 2000 }, { user_id: user['_id'], label: 2500, value: 2500 }, { user_id: user['_id'], label: 3000, value: 3000 },
+                        { user_id: user['_id'], label: 3500, value: 3500 }, { user_id: user['_id'], label: 4000, value: 4000 }, { user_id: user['_id'], label: 4500, value: 4500 },
+                        { user_id: user['_id'], label: 5000, value: 5000 }
+                    ];
+                    yield BidButton_1.default.insertMany(buttons);
+                }
                 const data = {
                     message: 'Success',
                     data: user
@@ -220,7 +229,7 @@ class AdminController {
                 var user_data = yield User_1.default.findOne({ _id: req.body.user_id });
                 var admin_data = yield Admin_1.default.findOne({ _id: req.admin.admin_id });
                 const from_balance = Number(admin_data.wallet) - Number(coins);
-                const to_balance = Number(user_data.wallet) + Number(coins);
+                const to_balance = Number(user_data.balance) + Number(coins);
                 const idata = {
                     from: from,
                     from_id: from_id,
@@ -263,7 +272,7 @@ class AdminController {
             try {
                 var user_data = yield User_1.default.findOne({ _id: req.body.user_id });
                 var admin_data = yield Admin_1.default.findOne({ _id: req.admin.admin_id });
-                const from_balance = Number(user_data.wallet) - Number(coins);
+                const from_balance = Number(user_data.balance) - Number(coins);
                 const to_balance = Number(admin_data.wallet) + Number(coins);
                 const idata = {
                     from: from,
@@ -279,7 +288,7 @@ class AdminController {
                 };
                 let walletTransaction = yield new WalletTransaction_1.default(idata).save();
                 if (walletTransaction) {
-                    var user_wallet = yield User_1.default.findOneAndUpdate({ _id: from_id }, { $inc: { wallet: -coins } }, { new: true, useFindAndModify: false });
+                    var user_wallet = yield User_1.default.findOneAndUpdate({ _id: from_id }, { $inc: { balance: -coins } }, { new: true, useFindAndModify: false });
                     var admin_wallet = yield Admin_1.default.findOneAndUpdate({ _id: to_id }, { $inc: { wallet: coins } }, { new: true, useFindAndModify: false });
                 }
                 const data = {
