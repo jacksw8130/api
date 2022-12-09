@@ -205,7 +205,7 @@ export class UserController {
             var user_data = await User.findOne({_id: req.user.user_id});
 
             if(req.body.yes_or_no=="no"){
-                let bid_amount=req.body.bid_amount*req.body.winning_percentage/100;
+                let bid_amount=req.body.bid_amount;
                 if(user_data['wallet']>bid_amount){
                     const bdata = {
                         user_id: req.user.user_id,
@@ -305,7 +305,7 @@ export class UserController {
             var user_data = await User.findOne({_id: req.user.user_id});
 
             if(req.body.yes_or_no=="no"){
-                let bid_amount=req.body.bid_amount*req.body.winning_percentage/100;
+                let bid_amount=req.body.bid_amount;
                 if(user_data['wallet']>bid_amount){
                     const bdata = {
                         user_id: req.user.user_id,
