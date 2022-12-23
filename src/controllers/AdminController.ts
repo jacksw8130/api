@@ -106,23 +106,12 @@ export class AdminController {
             var users_array=[];
             for (const user of users) {
                 let myData = user.toObject();
-                // Balance
-                myData['balance']=myData['wallet'];
-
-                // Exposure
-                let bids = await Bid.find({user_id:user['_id'], result_declare_status:false});
-                var sum=0;
-                for (const bid of bids) {
-                    sum+=bid['bid_amount'];
-                }
-                myData['exposure']=sum;
 
                 // Profit/Loss
-                let bids_complete = await Bid.find({user_id:user['_id'], result_declare_status:true});
+                let wts = await WalletTransaction.find({$or:[{from_id:user['_id']},{to_id:user['_id']}], mode:"bidding"});
                 var pl=0;
-                for (const bidc of bids_complete) {
-                    let remain = bidc['winning_amount']-bidc['bid_amount'];
-                    pl+=remain;
+                for (const wt of wts) {
+                    pl+=wt['coins'];
                 }
                 myData['pl']=pl;
                 users_array.push(myData);  

@@ -21,6 +21,7 @@ const User_1 = require("../models/User");
 const socketService_1 = require("./socketService");
 const Admin_1 = require("../models/Admin");
 const WalletTransaction_1 = require("../models/WalletTransaction");
+const Notice_1 = require("../models/Notice");
 class SocketHandler {
     // io changed to socketService.io
     static connectSocket() {
@@ -41,6 +42,11 @@ class SocketHandler {
             else {
                 socketService_1.socketService.io.emit('change', 'notfound');
             }
+        }));
+        // All Notice
+        socket.on('allNotice', () => __awaiter(this, void 0, void 0, function* () {
+            let notice = yield Notice_1.default.find({ status: true }, { __v: 0 });
+            socketService_1.socketService.io.emit('allNotice', notice);
         }));
         // All State
         socket.on('allState', (socket_id) => __awaiter(this, void 0, void 0, function* () {

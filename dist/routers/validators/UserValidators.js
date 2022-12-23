@@ -90,17 +90,22 @@ class UserValidators {
     static bid() {
         return [
             (0, express_validator_1.body)('bid_amount', 'bid_amount is Required').isNumeric().custom((bid_amount, { req }) => {
-                return User_1.default.findOne({ _id: req.user.user_id, bid_status: true, wallet: { $gte: bid_amount } }).populate('admin_id').then(user => {
+                return User_1.default.findOne({ _id: req.user.user_id, bid_status: true }).populate('admin_id').then(user => {
                     if (user) {
                         if (user['admin_id']['bid_status'] == true) {
-                            return true;
+                            if (user['balance'] - user['exposure'] > bid_amount) {
+                                return true;
+                            }
+                            else {
+                                throw new Error('Low Balance');
+                            }
                         }
                         else {
                             throw new Error('Contact Admin regarding bid ban');
                         }
                     }
                     else {
-                        throw new Error('Low Balance / Bid Ban');
+                        throw new Error('Bid Ban');
                     }
                 });
             }),
@@ -133,17 +138,22 @@ class UserValidators {
     static bid_candidate() {
         return [
             (0, express_validator_1.body)('bid_amount', 'bid_amount is Required').isNumeric().custom((bid_amount, { req }) => {
-                return User_1.default.findOne({ _id: req.user.user_id, bid_status: true, wallet: { $gte: bid_amount } }).populate('admin_id').then(user => {
+                return User_1.default.findOne({ _id: req.user.user_id, bid_status: true }).populate('admin_id').then(user => {
                     if (user) {
                         if (user['admin_id']['bid_status'] == true) {
-                            return true;
+                            if (user['balance'] - user['exposure'] > bid_amount) {
+                                return true;
+                            }
+                            else {
+                                throw new Error('Low Balance');
+                            }
                         }
                         else {
                             throw new Error('Contact Admin regarding bid ban');
                         }
                     }
                     else {
-                        throw new Error('Low Balance / Bid Ban');
+                        throw new Error('Bid Ban');
                     }
                 });
             }),

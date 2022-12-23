@@ -10,6 +10,7 @@ import User from "../models/User";
 import { socketService } from "./socketService";
 import Admin from "../models/Admin";
 import WalletTransaction from "../models/WalletTransaction";
+import Notice from "../models/Notice";
 
 export class SocketHandler{
 
@@ -38,6 +39,12 @@ export class SocketHandler{
             }else{
                 socketService.io.emit('change', 'notfound');
             }
+        });
+
+        // All Notice
+        socket.on('allNotice', async ()=>{
+            let notice = await Notice.find({status:true}, {__v: 0});
+            socketService.io.emit('allNotice', notice);
         });
 
         // All State

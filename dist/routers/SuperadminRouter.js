@@ -17,7 +17,7 @@ class SuperadminRouter {
         this.router.get('/admin/all', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, SuperadminController_1.SuperadminController.allAdmin);
         this.router.get('/admin/user/:id', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, SuperadminValidators_1.SuperadminValidators.allUser(), GlobalMiddleWare_1.GlobalMiddleWare.checkError, SuperadminController_1.SuperadminController.allUser);
         this.router.get('/login', SuperadminValidators_1.SuperadminValidators.login(), GlobalMiddleWare_1.GlobalMiddleWare.checkError, SuperadminController_1.SuperadminController.login);
-        this.router.post('/transaction/all', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, SuperadminController_1.SuperadminController.allTransaction);
+        this.router.get('/transaction/all', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, SuperadminController_1.SuperadminController.allTransaction);
         this.router.get('/transaction/my', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, SuperadminController_1.SuperadminController.myTransaction);
         //this.router.get('/ticket/bid_result/:id', GlobalMiddleWare.superadminAuthenticate, SuperadminValidators.bidResult(), GlobalMiddleWare.checkError, SuperadminController.bidResult);
         this.router.get('/user/all', GlobalMiddleWare_1.GlobalMiddleWare.superadminAuthenticate, SuperadminController_1.SuperadminController.sAllUser);

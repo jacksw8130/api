@@ -16,7 +16,6 @@ const Admin_1 = require("../models/Admin");
 const User_1 = require("../models/User");
 const Utils_1 = require("../utils/Utils");
 const WalletTransaction_1 = require("../models/WalletTransaction");
-const Bid_1 = require("../models/Bid");
 const BidButton_1 = require("../models/BidButton");
 class AdminController {
     static login(req, res, next) {
@@ -116,21 +115,11 @@ class AdminController {
                 var users_array = [];
                 for (const user of users) {
                     let myData = user.toObject();
-                    // Balance
-                    myData['balance'] = myData['wallet'];
-                    // Exposure
-                    let bids = yield Bid_1.default.find({ user_id: user['_id'], result_declare_status: false });
-                    var sum = 0;
-                    for (const bid of bids) {
-                        sum += bid['bid_amount'];
-                    }
-                    myData['exposure'] = sum;
                     // Profit/Loss
-                    let bids_complete = yield Bid_1.default.find({ user_id: user['_id'], result_declare_status: true });
+                    let wts = yield WalletTransaction_1.default.find({ $or: [{ from_id: user['_id'] }, { to_id: user['_id'] }], mode: "bidding" });
                     var pl = 0;
-                    for (const bidc of bids_complete) {
-                        let remain = bidc['winning_amount'] - bidc['bid_amount'];
-                        pl += remain;
+                    for (const wt of wts) {
+                        pl += wt['coins'];
                     }
                     myData['pl'] = pl;
                     users_array.push(myData);

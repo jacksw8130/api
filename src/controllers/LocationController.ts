@@ -148,14 +148,15 @@ export class LocationController {
                     // All ticket of this location
                     let tickets = await TicketCandidate.find({location_id:location['_id']}, {__v: 0});
 
-                    for (const ticket of tickets) {
+                    for (let ticket of tickets) {
 
                         // update yes/no result
-                        if(ticket['candidate_id']==candidate_winner_id){
-                            await TicketCandidate.findOneAndUpdate({_id: ticket['_id']}, {yes_result:true, no_result:false, result_declare_status:true}, {new: true, useFindAndModify: false});
+                        if(String(ticket['candidate_id'])==String(candidate_winner_id)){
+                            ticket = await TicketCandidate.findOneAndUpdate({_id: ticket['_id']}, {yes_result:true, no_result:false, result_declare_status:true}, {new: true, useFindAndModify: false});
                         }else{
-                            await TicketCandidate.findOneAndUpdate({_id: ticket['_id']}, {yes_result:false, no_result:true, result_declare_status:true}, {new: true, useFindAndModify: false});
+                            ticket = await TicketCandidate.findOneAndUpdate({_id: ticket['_id']}, {yes_result:false, no_result:true, result_declare_status:true}, {new: true, useFindAndModify: false});
                         }   
+                        console.log(ticket['yes_result']);
 
                         // find all users who bid in this ticket
                         let user_id_array=[];
@@ -176,6 +177,8 @@ export class LocationController {
                             const bids = await Bid.find({ticket_type:"ticket_candidates",ticket_id: ticket._id,result_declare_status:false,bid_status:"pending"});
                             for (const bid of bids) {
                                 // update yes_seats
+                                console.log(bid['yes_or_no']);
+                                console.log(ticket['yes_result']);
                                 if(bid['yes_or_no']=="yes"){
                                     if(ticket['yes_result']==true){
                                         // winning amount

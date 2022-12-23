@@ -20,6 +20,7 @@ import { SocketHandler } from './socket/socketHandler';
 import CandidateRouter from './routers/CandidateRouter';
 import TicketCandidateRouter from './routers/TicketCandidateRouter';
 import LocationRouter from './routers/LocationRouter';
+import NoticeRouter from './routers/NoticeRouter';
 
 export class Server {
     //public app:express.Application = express();
@@ -67,6 +68,7 @@ export class Server {
         this.app.use('/api/party', PartyRouter);
         this.app.use('/api/location', LocationRouter);
         this.app.use('/api/candidate', CandidateRouter);
+        this.app.use('/api/notice', NoticeRouter);
         this.app.use('/api/ticket_candidate', TicketCandidateRouter);
     }
 

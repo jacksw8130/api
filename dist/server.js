@@ -19,6 +19,7 @@ const socketHandler_1 = require("./socket/socketHandler");
 const CandidateRouter_1 = require("./routers/CandidateRouter");
 const TicketCandidateRouter_1 = require("./routers/TicketCandidateRouter");
 const LocationRouter_1 = require("./routers/LocationRouter");
+const NoticeRouter_1 = require("./routers/NoticeRouter");
 class Server {
     constructor() {
         //public app:express.Application = express();
@@ -61,6 +62,7 @@ class Server {
         this.app.use('/api/party', PartyRouter_1.default);
         this.app.use('/api/location', LocationRouter_1.default);
         this.app.use('/api/candidate', CandidateRouter_1.default);
+        this.app.use('/api/notice', NoticeRouter_1.default);
         this.app.use('/api/ticket_candidate', TicketCandidateRouter_1.default);
     }
     error404Handler() {

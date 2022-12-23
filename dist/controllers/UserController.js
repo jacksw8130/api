@@ -17,6 +17,7 @@ const BidButton_1 = require("../models/BidButton");
 const User_1 = require("../models/User");
 const WalletTransaction_1 = require("../models/WalletTransaction");
 const Utils_1 = require("../utils/Utils");
+const moment = require("moment-timezone");
 class UserController {
     static login(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -110,10 +111,17 @@ class UserController {
     static transaction(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const user_transactions = yield WalletTransaction_1.default.find({ $or: [{ from_id: req.user.user_id }, { to_id: req.user.user_id }] }).sort({ created_at: -1 }).populate([
+                let condition = {};
+                if (req.query.from_date && req.query.to_date) { // Format : 2022-5-19
+                    condition = Object.assign(Object.assign({}, condition), { created_at: {
+                            $gte: moment.tz(req.query.from_date, "Asia/Kolkata").add(5, 'hours').add(30, 'minute'),
+                            $lt: moment.tz(req.query.to_date, "Asia/Kolkata").add(5, 'hours').add(30, 'minute')
+                        } });
+                }
+                const user_transactions = yield WalletTransaction_1.default.find(Object.assign(Object.assign({}, condition), { $or: [{ from_id: req.user.user_id }, { to_id: req.user.user_id }] })).sort({ created_at: -1 }).populate([
                     { path: 'from_id' },
                     { path: 'to_id' },
-                    { path: 'ticket_id' }
+                    { path: 'ticket_id', populate: { path: "location_id" } }
                 ]);
                 let userTransactionWithBids = [];
                 for (const user_transaction of user_transactions) {
@@ -216,7 +224,7 @@ class UserController {
                 var user_data = yield User_1.default.findOne({ _id: req.user.user_id });
                 if (req.body.yes_or_no == "no") {
                     let bid_amount = req.body.bid_amount;
-                    if (user_data['wallet'] > bid_amount) {
+                    if (user_data['balance'] - user_data['exposure'] > bid_amount) {
                         const bdata = {
                             user_id: req.user.user_id,
                             ticket_id: req.body.ticket_id,
@@ -308,7 +316,7 @@ class UserController {
                 var user_data = yield User_1.default.findOne({ _id: req.user.user_id });
                 if (req.body.yes_or_no == "no") {
                     let bid_amount = req.body.bid_amount;
-                    if (user_data['wallet'] > bid_amount) {
+                    if (user_data['balance'] - user_data['exposure'] > bid_amount) {
                         const bdata = {
                             user_id: req.user.user_id,
                             ticket_id: req.body.ticket_id,

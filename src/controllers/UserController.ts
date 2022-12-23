@@ -5,6 +5,7 @@ import BidButton from "../models/BidButton";
 import User from "../models/User";
 import WalletTransaction from "../models/WalletTransaction";
 import { Utils } from "../utils/Utils";
+import * as moment from 'moment-timezone';
 
 export class UserController {
 
@@ -105,16 +106,25 @@ export class UserController {
     static async transaction(req, res, next){
 
         try {
-            const user_transactions = await WalletTransaction.find({$or:[{from_id:req.user.user_id},{to_id:req.user.user_id}]}).sort({created_at: -1}).populate([
+            let condition={};
+            if(req.query.from_date && req.query.to_date ){ // Format : 2022-5-19
+                condition={...condition, 
+                    created_at: {
+                        $gte: moment.tz(req.query.from_date, "Asia/Kolkata").add(5, 'hours').add(30, 'minute'), 
+                        $lt: moment.tz(req.query.to_date, "Asia/Kolkata").add(5, 'hours').add(30, 'minute')
+                    } 
+                }
+            }
+            const user_transactions = await WalletTransaction.find({...condition, $or:[{from_id:req.user.user_id},{to_id:req.user.user_id}]}).sort({created_at: -1}).populate([
                 {path:'from_id'},
                 {path:'to_id'},
-                {path:'ticket_id'}
+                {path:'ticket_id', populate: { path: "location_id"} }
             ]);
             let userTransactionWithBids=[];
             for (const user_transaction of user_transactions) {
                 let myData:object = user_transaction.toObject();
                 if(myData['mode']=="bidding"){
-                    let bids=await Bid.find({ticket_id: myData['ticket_id']["_id"],user_id: req.user.user_id,result_declare_status:true});
+                    let bids=await Bid.find({ticket_id: myData['ticket_id']["_id"],user_id: req.user.user_id,result_declare_status:true})
                     myData['ticket_id']['bids']=bids;
                 }
                 userTransactionWithBids.push(myData);
@@ -206,7 +216,7 @@ export class UserController {
 
             if(req.body.yes_or_no=="no"){
                 let bid_amount=req.body.bid_amount;
-                if(user_data['wallet']>bid_amount){
+                if(user_data['balance']-user_data['exposure']>bid_amount){
                     const bdata = {
                         user_id: req.user.user_id,
                         ticket_id: req.body.ticket_id,
@@ -306,7 +316,7 @@ export class UserController {
 
             if(req.body.yes_or_no=="no"){
                 let bid_amount=req.body.bid_amount;
-                if(user_data['wallet']>bid_amount){
+                if(user_data['balance']-user_data['exposure']>bid_amount){
                     const bdata = {
                         user_id: req.user.user_id,
                         ticket_id: req.body.ticket_id,

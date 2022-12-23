@@ -18,6 +18,7 @@ const User_1 = require("../models/User");
 const Utils_1 = require("../utils/Utils");
 const WalletTransaction_1 = require("../models/WalletTransaction");
 const Bid_1 = require("../models/Bid");
+const moment = require("moment-timezone");
 class SuperadminController {
     static signup(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -519,23 +520,23 @@ class SuperadminController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 var condition = {};
-                if (req.body.user_code && !req.body.from_date && !req.body.to_date) {
-                    condition = { $or: [{ from_id: req.body.user_code }, { to_id: req.body.user_code }] };
+                if (req.query.user_code && !req.query.from_date && !req.query.to_date) {
+                    condition = { $or: [{ from_id: req.query.user_code }, { to_id: req.query.user_code }] };
                 }
-                else if (!req.body.user_code && req.body.from_date && req.body.to_date) {
+                else if (!req.query.user_code && req.query.from_date && req.query.to_date) {
                     condition = {
-                        created_on: {
-                            $gte: new Date(req.body.from_date),
-                            $lt: new Date(req.body.to_date)
+                        created_at: {
+                            $gte: moment.tz(req.query.from_date, "Asia/Kolkata").add(5, 'hours').add(30, 'minute'),
+                            $lt: moment.tz(req.query.to_date, "Asia/Kolkata").add(5, 'hours').add(30, 'minute')
                         }
                     };
                 }
-                else if (req.body.user_code && req.body.from_date && req.body.to_date) {
+                else if (req.query.user_code && req.query.from_date && req.query.to_date) {
                     condition = {
-                        $or: [{ from_id: req.body.user_code }, { to_id: req.body.user_code }],
-                        created_on: {
-                            $gte: new Date(req.body.from_date),
-                            $lt: new Date(req.body.to_date),
+                        $or: [{ from_id: req.query.user_code }, { to_id: req.query.user_code }],
+                        created_at: {
+                            $gte: moment.tz(req.query.from_date, "Asia/Kolkata").add(5, 'hours').add(30, 'minute'),
+                            $lt: moment.tz(req.query.to_date, "Asia/Kolkata").add(5, 'hours').add(30, 'minute')
                         }
                     };
                 }
